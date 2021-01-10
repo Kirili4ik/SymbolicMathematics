@@ -84,8 +84,8 @@ class MultiHeadAttention(nn.Module):
         if max_relative_positions > 0:
             vocab_size = max_relative_positions * 2 + 1 \
                 if use_neg_dist else max_relative_positions + 1
-            self.relative_positions_embeddings_k = nn.Embedding(vocab_size, dim * n_heads)   # dim ?
-            self.relative_positions_embeddings_v = nn.Embedding(vocab_size, dim * n_heads)
+            self.relative_positions_embeddings_k = nn.Embedding(vocab_size, dim//n_heads)   # ?
+            self.relative_positions_embeddings_v = nn.Embedding(vocab_size, dim//n_heads)
             print('dim; n_heads', dim, n_heads)
 
     def forward(self, input, mask, kv=None, cache=None):
@@ -137,6 +137,7 @@ class MultiHeadAttention(nn.Module):
             relative_positions_matrix = generate_relative_positions_matrix(
                 key_len, self.max_relative_positions, self.use_neg_dist,
                 cache=True if cache is not None else False)
+            print('k size', k.size())
             print('relative pos matrix size', relative_positions_matrix.size())
             #  1 or key_len x key_len x dim_per_head
             relations_k = self.relative_positions_embeddings_k(
