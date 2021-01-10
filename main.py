@@ -63,6 +63,11 @@ def get_parser():
                         help="Share input and output embeddings")
     parser.add_argument("--sinusoidal_embeddings", type=bool_flag, default=False,
                         help="Use sinusoidal embeddings")
+    parser.add_argument('--max_relative_pos', type=int,
+                        default=0, help='Max value for relative position representations')
+    parser.add_argument('--use_neg_dist', type='bool', default=True,
+                        help='Use negative Max value for relative position representations')
+
 
     # training parameters
     parser.add_argument("--env_base_seed", type=int, default=0,
