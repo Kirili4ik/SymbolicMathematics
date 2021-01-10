@@ -84,8 +84,8 @@ class MultiHeadAttention(nn.Module):
         if max_relative_positions > 0:
             vocab_size = max_relative_positions * 2 + 1 \
                 if use_neg_dist else max_relative_positions + 1
-            self.relative_positions_embeddings_k = nn.Embedding(vocab_size, self.d_k)
-            self.relative_positions_embeddings_v = nn.Embedding(vocab_size, self.d_v)
+            self.relative_positions_embeddings_k = nn.Embedding(vocab_size, dim)   # dim * n_heads ?
+            self.relative_positions_embeddings_v = nn.Embedding(vocab_size, dim)
 
     def forward(self, input, mask, kv=None, cache=None):
         """
