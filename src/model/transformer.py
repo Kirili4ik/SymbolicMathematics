@@ -13,6 +13,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from src.misc import generate_relative_positions_matrix, relative_matmul
 
 N_MAX_POSITIONS = 4096  # maximum input sequence length
 
@@ -65,7 +66,7 @@ class MultiHeadAttention(nn.Module):
 
     NEW_ID = itertools.count()
 
-    def __init__(self, n_heads, dim, dropout):
+    def __init__(self, n_heads, dim, dropout, max_relative_positions=0, use_neg_dist=False):
         super().__init__()
         self.layer_id = next(MultiHeadAttention.NEW_ID)
         self.dim = dim
@@ -77,6 +78,14 @@ class MultiHeadAttention(nn.Module):
         self.k_lin = nn.Linear(dim, dim)
         self.v_lin = nn.Linear(dim, dim)
         self.out_lin = nn.Linear(dim, dim)
+
+        self.max_relative_positions = max_relative_positions
+        self.use_neg_dist = use_neg_dist
+        if max_relative_positions > 0:
+            vocab_size = max_relative_positions * 2 + 1 \
+                if use_neg_dist else max_relative_positions + 1
+            self.relative_positions_embeddings_k = nn.Embedding(vocab_size, self.d_k)
+            self.relative_positions_embeddings_v = nn.Embedding(vocab_size, self.d_v)
 
     def forward(self, input, mask, kv=None, cache=None):
         """
@@ -121,20 +130,56 @@ class MultiHeadAttention(nn.Module):
                     k, v = cache[self.layer_id]
             cache[self.layer_id] = (k, v)
 
+        if kv is None and self.max_relative_positions > 0:
+            key_len = k.size(2)
+            # 1 or key_len x key_len
+            relative_positions_matrix = generate_relative_positions_matrix(
+                key_len, self.max_relative_positions, self.use_neg_dist,
+                cache=True if cache is not None else False)
+            #  1 or key_len x key_len x dim_per_head
+            relations_k = self.relative_positions_embeddings_k(
+                relative_positions_matrix.to(k.device))
+            #  1 or key_len x key_len x dim_per_head
+            relations_v = self.relative_positions_embeddings_v(
+                relative_positions_matrix.to(k.device))
+
         q = q / math.sqrt(dim_per_head)                                       # (bs, n_heads, qlen, dim_per_head)
-        scores = torch.matmul(q, k.transpose(2, 3))                           # (bs, n_heads, qlen, klen)
-        mask = (mask == 0).view(mask_reshape).expand_as(scores)               # (bs, n_heads, qlen, klen)
+        q_k = torch.matmul(q, k.transpose(2, 3))                              # (bs, n_heads, qlen, klen)
+        mask = (mask == 0).view(mask_reshape).expand_as(q_k)               # (bs, n_heads, qlen, klen)
+
+        if kv is None and self.max_relative_positions > 0:
+            scores = q_k + relative_matmul(q, relations_k, True)
+        else:
+            scores = q_k
+        scores = scores.float()  # ?
+
         scores.masked_fill_(mask, -float('inf'))                              # (bs, n_heads, qlen, klen)
 
         weights = F.softmax(scores.float(), dim=-1).type_as(scores)           # (bs, n_heads, qlen, klen)
         weights = F.dropout(weights, p=self.dropout, training=self.training)  # (bs, n_heads, qlen, klen)
         context = torch.matmul(weights, v)                                    # (bs, n_heads, qlen, dim_per_head)
+
+        if kv is None and self.max_relative_positions > 0:
+            context = context \
+                              + relative_matmul(weights[:, :, :, :weights.shape[-2]],
+                                                relations_v,
+                                                False)
+            # drop_attn: batch, heads, seq, 2seq
+
         context = unshape(context)                                            # (bs, qlen, dim)
 
         if TransformerModel.STORE_OUTPUTS and not self.training:
             self.outputs = weights.detach().cpu()
 
-        return self.out_lin(context)
+        final_output = self.out_lin(context)
+
+        # CHECK
+        #batch_, q_len_, d_ = output.size()
+        #aeq(q_len, q_len_)
+        #aeq(batch, batch_)
+        #aeq(d, d_)
+
+        return final_output
 
 
 class TransformerFFN(nn.Module):
