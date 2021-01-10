@@ -65,7 +65,7 @@ def get_parser():
                         help="Use sinusoidal embeddings")
     parser.add_argument('--max_relative_pos', type=int,
                         default=0, help='Max value for relative position representations')
-    parser.add_argument('--use_neg_dist', type='bool', default=True,
+    parser.add_argument('--use_neg_dist', type=bool_flag, default=True,
                         help='Use negative Max value for relative position representations')
 
 
