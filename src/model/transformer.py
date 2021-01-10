@@ -84,9 +84,8 @@ class MultiHeadAttention(nn.Module):
         if max_relative_positions > 0:
             vocab_size = max_relative_positions * 2 + 1 \
                 if use_neg_dist else max_relative_positions + 1
-            self.relative_positions_embeddings_k = nn.Embedding(vocab_size, dim//n_heads)   # ?
-            self.relative_positions_embeddings_v = nn.Embedding(vocab_size, dim//n_heads)
-            print('dim; n_heads', dim, n_heads)
+            self.relative_positions_embeddings_k = nn.Embedding(vocab_size, dim // n_heads)
+            self.relative_positions_embeddings_v = nn.Embedding(vocab_size, dim // n_heads)
 
     def forward(self, input, mask, kv=None, cache=None):
         """
@@ -137,24 +136,19 @@ class MultiHeadAttention(nn.Module):
             relative_positions_matrix = generate_relative_positions_matrix(
                 key_len, self.max_relative_positions, self.use_neg_dist,
                 cache=True if cache is not None else False)
-            print('k size', k.size())
-            print('relative pos matrix size', relative_positions_matrix.size())
             #  1 or key_len x key_len x dim_per_head
             relations_k = self.relative_positions_embeddings_k(
                 relative_positions_matrix.to(k.device))
             #  1 or key_len x key_len x dim_per_head
             relations_v = self.relative_positions_embeddings_v(
                 relative_positions_matrix.to(k.device))
-            print('relations size', relations_k.size())
 
         q = q / math.sqrt(dim_per_head)                                       # (bs, n_heads, qlen, dim_per_head)
         q_k = torch.matmul(q, k.transpose(2, 3))                              # (bs, n_heads, qlen, klen)
         mask = (mask == 0).view(mask_reshape).expand_as(q_k)               # (bs, n_heads, qlen, klen)
 
         if kv is None and self.max_relative_positions > 0:
-            relations_q = relative_matmul(q, relations_k, True)
-            print('relations_q size', relations_q.size())
-            scores = q_k + relations_q
+            scores = q_k + relative_matmul(q, relations_k, True)
         else:
             scores = q_k
         scores = scores.float()  # ?
@@ -166,12 +160,10 @@ class MultiHeadAttention(nn.Module):
         context = torch.matmul(weights, v)                                    # (bs, n_heads, qlen, dim_per_head)
 
         if kv is None and self.max_relative_positions > 0:
-            relations_final = relative_matmul(weights[:, :, :, :weights.shape[-2]],
+            context = context \
+                              + relative_matmul(weights[:, :, :, :weights.shape[-2]],
                                                 relations_v,
                                                 False)
-            print('relations_final size', relations_final.size())
-            context = context \
-                              + relations_final
             # drop_attn: batch, heads, seq, 2seq
 
         context = unshape(context)                                            # (bs, qlen, dim)
