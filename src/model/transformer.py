@@ -158,9 +158,6 @@ class MultiHeadAttention(nn.Module):
         context = torch.matmul(weights, v)                                    # (bs, n_heads, qlen, dim_per_head)
 
         if kv is None and self.max_relative_positions > 0:
-            print('print6', weights.size(), weights[:, :, :, :weights.shape[-2]].size())
-            print('print7', relations_v.size())
-            print('print8', context.size())
             context = context \
                               + relative_matmul(weights[:, :, :, :weights.shape[-2]],
                                                 relations_v,
