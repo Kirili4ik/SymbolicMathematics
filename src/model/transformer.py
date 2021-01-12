@@ -220,6 +220,8 @@ class TransformerModel(nn.Module):
         self.dropout = params.dropout
         self.attention_dropout = params.attention_dropout
         assert self.dim % self.n_heads == 0, 'transformer dim must be a multiple of n_heads'
+        self.max_relative_pos = 0 if 'max_relative_pos' not in params else params.max_relative_pos
+        self.use_neg_dist = False if 'use_neg_dist' not in params else params.use_neg_dist
 
         # embeddings
         self.position_embeddings = Embedding(N_MAX_POSITIONS, self.dim)
@@ -239,7 +241,7 @@ class TransformerModel(nn.Module):
 
         for layer_id in range(self.n_layers):
             self.attentions.append(MultiHeadAttention(self.n_heads, self.dim, dropout=self.attention_dropout,
-                                   max_relative_positions=params.max_relative_pos, use_neg_dist=params.use_neg_dist))
+                                   max_relative_positions=self.max_relative_pos, use_neg_dist=self.use_neg_dist))
             self.layer_norm1.append(nn.LayerNorm(self.dim, eps=1e-12))
             if self.is_decoder:
                 self.layer_norm15.append(nn.LayerNorm(self.dim, eps=1e-12))
