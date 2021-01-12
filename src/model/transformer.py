@@ -135,23 +135,17 @@ class MultiHeadAttention(nn.Module):
             relative_positions_matrix = generate_relative_positions_matrix(   # 1 or klen x klen
                 key_len, self.max_relative_positions, self.use_neg_dist,
                 cache=True if cache is not None else False)
-            print('print1', relative_positions_matrix.size())
             relations_k = self.relative_positions_embeddings_k(               #  1 or klen x klen x dim_per_head
                 relative_positions_matrix.to(k.device))
-            print('print2', relations_k.size())
             relations_v = self.relative_positions_embeddings_v(               #  1 or klen x klen x dim_per_head
                 relative_positions_matrix.to(k.device))
 
         q = q / math.sqrt(dim_per_head)                                       # (bs, n_heads, qlen, dim_per_head)
         q_k = torch.matmul(q, k.transpose(2, 3))                              # (bs, n_heads, qlen, klen)
-        print('q, k, qk', q.size(), k.size(), q_k.size())
         mask = (mask == 0).view(mask_reshape).expand_as(q_k)                  # (bs, n_heads, qlen, klen)
 
         if kv is None and self.max_relative_positions > 0:
-            print('print3', q.size(), relations_k.size())
             res1 = relative_matmul(q, relations_k, True)
-            print('print4', res1.size())
-            print('print5', q_k.size())
             scores = q_k + res1
         else:
             scores = q_k
@@ -171,7 +165,7 @@ class MultiHeadAttention(nn.Module):
                               + relative_matmul(weights[:, :, :, :weights.shape[-2]],
                                                 relations_v,
                                                 False)
-            # weights: batch, heads, seq, 2seq
+            # weights: batch, heads, seq, 2seq (or usually bs, heads, seq, seq)
 
         context = unshape(context)                                            # (bs, qlen, dim)
 
