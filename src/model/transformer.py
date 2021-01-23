@@ -224,9 +224,11 @@ class TransformerModel(nn.Module):
         self.use_neg_dist = False if 'use_neg_dist' not in params else params.use_neg_dist
 
         # embeddings
-        self.position_embeddings = Embedding(N_MAX_POSITIONS, self.dim)
-        if params.sinusoidal_embeddings:
-            create_sinusoidal_embeddings(N_MAX_POSITIONS, self.dim, out=self.position_embeddings.weight)
+        self.use_pos_embeddings = params.use_pos_embeddings
+        if params.use_pos_embeddings:
+            self.position_embeddings = Embedding(N_MAX_POSITIONS, self.dim)
+            if params.sinusoidal_embeddings:
+                create_sinusoidal_embeddings(N_MAX_POSITIONS, self.dim, out=self.position_embeddings.weight)
         self.embeddings = Embedding(self.n_words, self.dim, padding_idx=self.pad_index)
         self.layer_norm_emb = nn.LayerNorm(self.dim, eps=1e-12)
 
@@ -317,7 +319,8 @@ class TransformerModel(nn.Module):
         # embeddings
         if previous_state is None:
             tensor = self.embeddings(x)
-            tensor = tensor + self.position_embeddings(positions).expand_as(tensor)
+            if self.use_pos_embeddings:
+                tensor = tensor + self.position_embeddings(positions).expand_as(tensor)
             tensor = self.layer_norm_emb(tensor)
             tensor = F.dropout(tensor, p=self.dropout, training=self.training)
             tensor *= mask.unsqueeze(-1).to(tensor.dtype)

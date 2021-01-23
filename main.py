@@ -61,6 +61,8 @@ def get_parser():
                         help="Dropout in the attention layer")
     parser.add_argument("--share_inout_emb", type=bool_flag, default=True,
                         help="Share input and output embeddings")
+    parser.add_argument('--use_pos_embeddings', type=bool_flag, default=True,
+                        help='Use positional embeddings')
     parser.add_argument("--sinusoidal_embeddings", type=bool_flag, default=False,
                         help="Use sinusoidal embeddings")
     parser.add_argument('--max_relative_pos', type=int,
