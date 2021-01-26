@@ -140,7 +140,8 @@ class MultiHeadAttention(nn.Module):
                 cache=True if cache is not None else False)
 
             print('generated rel pos matrix size', relative_positions_matrix.size())
-            print('generated rel pos matrix', relative_positions_matrix)
+            print('generated rel pos matrix')
+            print(relative_positions_matrix)
 
             relations_k = self.relative_positions_embeddings_k(               #  1 or klen x klen x dim_per_head
                 relative_positions_matrix.to(k.device))
@@ -154,12 +155,14 @@ class MultiHeadAttention(nn.Module):
         if kv is None and self.max_relative_positions > 0:
 
             print('query size', q.size())
-            print('query', q)
+            print('query')
+            print(q)
 
             res1 = relative_matmul(q, relations_k, True)
 
             print('res1 or q * relations_keys size', res1.size())
-            print('res1 or q * relations_keys', res1)
+            print('res1 or q * relations_keys')
+            print(res1)
 
             scores = q_k + res1
         else:
@@ -175,17 +178,19 @@ class MultiHeadAttention(nn.Module):
         if kv is None and self.max_relative_positions > 0:
 
             print('weights or drop(softmax(mask(q_k))) size', weights.size())
-            print('weights or drop(softmax(mask(q_k)))', weights)
+            print('weights or drop(softmax(mask(q_k)))')
+            print(weights)
 
             res2 = relative_matmul(weights[:, :, :, :weights.shape[-2]],
                                                 relations_v,
                                                 False)
 
-            if weights != weights[:, :, :, :weights.shape[-2]]:
+            if weights.size(-1) != weights[:, :, :, :weights.shape[-2]].size(-1):
                 print("LULS NOT EQUAL " * 100)
 
             print('res2 or weights * relations_values size', res2.size())
-            print('res2 or weights * relations_values', res2)
+            print('res2 or weights * relations_values')
+            print(res2)
 
 
             context = context + res2
