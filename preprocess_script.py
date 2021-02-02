@@ -126,7 +126,7 @@ def get_path(i, j):
         if node in anc_i:
             up_n = levels[i] - levels[node]
             down_n = levels[j] - levels[node]
-            return str(up_n + 0.001 * down_n)
+            return str(round(up_n + 0.001 * down_n), 5)
 
 
 def get_ud_masks(ancestors, levels, exp_len):
