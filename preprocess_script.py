@@ -93,7 +93,11 @@ def get_ancestors(exp_list, exp_len):
         op_now = exp_list[i]
 
         node2parent[i] = parent
-        levels[i] = levels[parent] + 1
+        try:
+            levels[i] = levels[parent] + 1
+        except:
+            print('you are in except')
+            return {}, {}
 
         if op_now in OPERATORS or op_now in symbols:   # <=> node has children
             if op_now in OPERATORS and OPERATORS[op_now] == 2:    # <=> node has 2 children
