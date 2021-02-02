@@ -136,7 +136,6 @@ class Trainer(object):
         # create data loaders
         if not params.eval_only:
             if params.env_base_seed < 0:
-                print('I AM RANDOM NOW; Look at trainer.py line ~139')
                 params.env_base_seed = np.random.randint(1_000_000_000)
             self.dataloader = {
                 task: iter(self.env.create_train_iterator(task, params, self.data_path))

@@ -1352,7 +1352,7 @@ class CharSPEnvironment(object):
             self,
             task,
             train=False,
-            rng=None,
+            rng=np.random.RandomState(0),
             params=params,
             path=(None if data_path is None else data_path[task][1 if data_type == 'valid' else 2])
         )
@@ -1379,7 +1379,7 @@ class EnvDataset(Dataset):
         self.path = path
         self.global_rank = params.global_rank
         self.count = 0
-        # assert (train is True) == (rng is None)
+        assert (train is True) == (rng is None)
         assert task in CharSPEnvironment.TRAINING_TASKS
 
         # batching
@@ -1433,7 +1433,7 @@ class EnvDataset(Dataset):
         Initialize random generator for training.
         """
         if self.rng is None:
-            # assert self.train is True
+            assert self.train is True
             worker_id = self.get_worker_id()
             self.env.worker_id = worker_id
             self.rng = np.random.RandomState([worker_id, self.global_rank, self.env_base_seed])
@@ -1482,9 +1482,6 @@ class EnvDataset(Dataset):
         """
         Generate a sample.
         """
-
-        print('you are generating samples.')
-
         while True:
 
             try:
