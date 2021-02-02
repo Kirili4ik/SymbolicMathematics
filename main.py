@@ -4,6 +4,7 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 #
+import os
 
 import json
 import random
@@ -18,6 +19,18 @@ from src.model import check_model_params, build_modules
 from src.envs import ENVS, build_env
 from src.trainer import Trainer
 from src.evaluator import Evaluator
+
+
+def fix_torch_n_random_seed(seed=0):
+    """
+    fixes seeds everywhere
+    :param seed: random seed
+    """
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
 
 
 np.seterr(all='raise')
@@ -74,6 +87,8 @@ def get_parser():
     # training parameters
     parser.add_argument("--env_base_seed", type=int, default=0,
                         help="Base seed for environments (-1 to use timestamp seed)")
+    parser.add_argument("--torch_n_random_seed", type=int, default=0,
+                        help="Seed to fix in random and torch modules for stability (-1 not to fix)")
     parser.add_argument("--max_len", type=int, default=512,
                         help="Maximum sequences length")
     parser.add_argument("--batch_size", type=int, default=32,
@@ -156,6 +171,10 @@ def get_parser():
 
 
 def main(params):
+
+    # fix needed seeds
+    if params.torch_n_random_seed != -1:
+        fix_torch_n_random_seed(params.torch_n_random_seed)
 
     # initialize the multi-GPU / multi-node training
     # initialize experiment / SLURM signal handler for time limit / pre-emption
