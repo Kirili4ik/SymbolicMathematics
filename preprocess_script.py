@@ -126,7 +126,7 @@ def get_path(i, j):
         if node in anc_i:
             up_n = levels[i] - levels[node]
             down_n = levels[j] - levels[node]
-            return str(round(up_n + 0.001 * down_n), 5)
+            return str(round(up_n + 0.001 * down_n, 5))
 
 
 def get_ud_masks(ancestors, levels, exp_len):
@@ -142,7 +142,7 @@ def get_ud_masks(ancestors, levels, exp_len):
 import json
 import jsonlines
 
-for set_name in ['train']:
+for set_name in ['test', 'valid', 'train']:
     with open('data/prim_fwd.' + set_name, 'r') as expressions:
         with jsonlines.open('data/rel_matrix_'+set_name+'.jsonl', 'w') as rel_matrix_json:
             for i, line in tqdm(enumerate(expressions)):
