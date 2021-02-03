@@ -7,3 +7,4 @@
 
 source activate sym-math
 srun python preprocess_script.py
+srun python preprocess_script2.py

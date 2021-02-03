@@ -10,6 +10,49 @@ from src.model import build_modules
 from src.utils import to_cuda
 from src.envs.sympy_utils import simplify
 
+
+#### DELETE BROKEM LINES FROM TRAIN SET
+broken_lines =
+{4349372,
+ 4478366,
+ 9477649,
+ 11108614,
+ 13338549,
+ 15378420,
+ 16625647,
+ 18780661,
+ 21462213,
+ 21736518,
+ 22876335,
+ 24746917,
+ 25308079,
+ 26260112,
+ 26678325,
+ 27336771,
+ 28177656,
+ 31301659,
+ 31414564,
+ 31903860,
+ 31965923,
+ 32883572,
+ 33890014,
+ 34410211,
+ 37623411,
+ 39427500,
+ 40277450,
+ 44598911}
+
+
+with open('data/prim_fwd.train', 'r') as f, open('data/prim_fwd.train_clean') as f_new:
+    for i, line in enumerate(f):
+        if i in broken_lines:
+            continue
+        else:
+            f_new.write(line)
+
+
+
+
 OPERATORS = {
         # Elementary functions
         'add': 2,
@@ -121,7 +164,7 @@ def get_path(i, j):
     if i == j:
         return "<self>"
     anc_i = set(ancestors[i])
-      
+
     for node in ancestors[j][-(levels[i] + 1) :]:
         if node in anc_i:
             up_n = levels[i] - levels[node]
@@ -133,7 +176,7 @@ def get_ud_masks(ancestors, levels, exp_len):
     path_rels = []
     for i in range(exp_len):
         path_rels.append(" ".join([get_path(i, j) for j in range(exp_len)]))
-    
+
     return path_rels
 
 
@@ -142,7 +185,7 @@ def get_ud_masks(ancestors, levels, exp_len):
 import json
 import jsonlines
 
-for set_name in ['test', 'valid', 'train']:
+for set_name in ['test', 'valid', 'train_clean']:
     with open('data/prim_fwd.' + set_name, 'r') as expressions:
         with jsonlines.open('data/rel_matrix_'+set_name+'.jsonl', 'w') as rel_matrix_json:
             for i, line in tqdm(enumerate(expressions)):
@@ -154,10 +197,10 @@ for set_name in ['test', 'valid', 'train']:
                     print(i,'is broken')
                     continue
                 #print(q, ';', a)
-                
+
                 q = q.split()
                 #a = a.split()
-                
+
                 ancestors, levels = get_ancestors(q, len(q))
                 if len(ancestors) == 0:
                     print(i, 'is broken; see previous line')
@@ -166,5 +209,8 @@ for set_name in ['test', 'valid', 'train']:
 
                 #ancestors, levels = get_ancestors(a, len(a))
                 #rel_matrix_a = get_ud_masks(ancestors, levels, len(a))
-                
+
                 rel_matrix_json.write(json.dumps(rel_matrix_q, indent=0))
+
+
+
