@@ -12,7 +12,7 @@ def _insert(iterable):
     word_count.update(words)
 
 word_count = Counter()
-with jsonlines.open("data/rel_matrix_train.jsonl") as f:
+with jsonlines.open("data/rel_matrix_train_clean.jsonl") as f:
     for line in tqdm(f):
         matrix = json.loads(line)
         new_matrix = [line.split() for line in matrix]
@@ -38,4 +38,3 @@ for i, (key, value) in enumerate(zip(keys[idxs], values[idxs])):
     vocab.append(key)
 with open("data/rel_vocab.txt", "w") as fout:
     fout.write("\n".join(vocab))
-

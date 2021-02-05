@@ -12,7 +12,7 @@ from src.envs.sympy_utils import simplify
 
 
 #### DELETE BROKEM LINES FROM TRAIN SET
-broken_lines =
+broken_lines = \
 {4349372,
  4478366,
  9477649,
@@ -43,7 +43,7 @@ broken_lines =
  44598911}
 
 
-with open('data/prim_fwd.train', 'r') as f, open('data/prim_fwd.train_clean') as f_new:
+with open('data/prim_fwd.train', 'r') as f, open('data/prim_fwd.train_clean', 'w') as f_new:
     for i, line in enumerate(f):
         if i in broken_lines:
             continue
@@ -211,6 +211,3 @@ for set_name in ['test', 'valid', 'train_clean']:
                 #rel_matrix_a = get_ud_masks(ancestors, levels, len(a))
 
                 rel_matrix_json.write(json.dumps(rel_matrix_q, indent=0))
-
-
-
