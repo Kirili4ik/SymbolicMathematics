@@ -173,7 +173,9 @@ def get_parser():
 def main(params):
 
     # fix needed seeds
-    if params.torch_n_random_seed != -1:
+    if params.torch_n_random_seed < 0:
+        fix_torch_n_random_seed(np.random.randint(1_000_000_000))
+    else:
         fix_torch_n_random_seed(params.torch_n_random_seed)
 
     # initialize the multi-GPU / multi-node training
