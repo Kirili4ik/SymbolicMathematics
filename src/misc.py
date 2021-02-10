@@ -40,3 +40,35 @@ def relative_matmul(x, z, transpose):
     x_tz_matmul_r = x_tz_matmul.reshape(length, batch_size, heads, -1)
     x_tz_matmul_r_t = x_tz_matmul_r.permute(1, 2, 0, 3)
     return x_tz_matmul_r_t
+
+
+def get_rel_mask(lengths, max_len):
+    """
+    Creates a boolean 3d mask from sequence lengths.
+    :param lengths: 1d tensor [batch_size]
+    :param max_len: int
+    Used in tree relative attention
+    """
+    batch_size = lengths.numel()
+    max_len = max_len or lengths.max()
+    rel_matrix_mask = torch.zeros(batch_size, max_len, max_len, device=lengths.device)
+    for i, l in enumerate(lengths):
+        rel_matrix_mask[i, :l, :l] = 1
+    return rel_matrix_mask
+
+
+class FileReader:
+    def __init__(self, filename):
+        self.fin = open(filename, "r")
+        self.line_map = list()             # Map from line index -> file position.
+        self.line_map.append(0)
+        i = 0
+        while self.fin.readline():
+            self.line_map.append(self.fin.tell())
+            i += 1
+            if i % 5_000_000 == 0:
+                print('read', i)
+
+    def get_line(self, index):
+        self.fin.seek(self.line_map[index])
+        return self.fin.readline()

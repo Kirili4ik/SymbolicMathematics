@@ -13,7 +13,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from src.misc import generate_relative_positions_matrix, relative_matmul
+from src.misc import generate_relative_positions_matrix, relative_matmul, get_rel_mask
 
 N_MAX_POSITIONS = 4096  # maximum input sequence length
 
@@ -66,7 +66,8 @@ class MultiHeadAttention(nn.Module):
 
     NEW_ID = itertools.count()
 
-    def __init__(self, n_heads, dim, dropout, max_relative_positions=0, use_neg_dist=False):
+    def __init__(self, n_heads, dim, dropout, max_relative_positions=0, use_neg_dist=False,
+                 use_tree_rel_att=None, tree_rel_vocab_size=0):
         super().__init__()
         self.layer_id = next(MultiHeadAttention.NEW_ID)
         self.dim = dim
@@ -86,8 +87,17 @@ class MultiHeadAttention(nn.Module):
                 if use_neg_dist else max_relative_positions + 1
             self.relative_positions_embeddings_k = nn.Embedding(vocab_size, dim // n_heads)
             self.relative_positions_embeddings_v = nn.Embedding(vocab_size, dim // n_heads)
+        self.use_tree_rel_att = use_tree_rel_att
+        if use_tree_rel_att in {"mult1", "mult2"}:
+            self.tree_relative_embeddings = nn.Embedding(tree_rel_vocab_size,
+                                                         n_heads)
+        elif use_tree_rel_att == "addit":
+            self.tree_relative_embeddings_k = nn.Embedding(tree_rel_vocab_size,
+                                                           dim // n_heads)
+            self.tree_relative_embeddings_v = nn.Embedding(n_heads,
+                                                           dim // n_heads)
 
-    def forward(self, input, mask, kv=None, cache=None):
+    def forward(self, input, mask, kv=None, cache=None, rel_matrix=None, rel_mask=None):
         """
         Self-attention (if kv is None) or attention over source sentence (provided by kv).
         """
@@ -164,6 +174,33 @@ class MultiHeadAttention(nn.Module):
             #print(res1)
 
             scores = q_k + res1
+        elif kv is None and self.use_tree_rel_att is not None:
+
+            ####### tree relative attention #######
+            if self.use_tree_relative_attn == "mult1":
+                tree_relative = self.tree_relative_embeddings(rel_matrix). \
+                    permute(0, 3, 1, 2)
+                # batch x query_len x key_len x num_heads
+                scores = q_k * (tree_relative * rel_mask.unsqueeze(1)) + \
+                         q_k * (1 - rel_mask.unsqueeze(1))
+            elif self.use_tree_relative_attn == "mult2":
+                tree_relative = self.tree_relative_embeddings(rel_matrix). \
+                    permute(0, 3, 1, 2)
+                # batch x query_len x key_len x num_heads
+                scores = q_k + (tree_relative * rel_mask.unsqueeze(1))
+            elif self.use_tree_relative_attn == "addit":
+                # rel_matrix # batch x len x len
+                tree_relation_keys = self.tree_relative_embeddings_k(rel_matrix)
+                tree_relation_values = self.tree_relative_embeddings_v(rel_matrix)
+                # batch x len x len x dim
+                relmatmul = torch.matmul(q[:, :, :, None, :], \
+                                         tree_relation_keys[:, None, :, :, :].transpose(4, 3)) \
+                    .squeeze(3)
+                # batch, heads, len, 1, dim  , batch, 1, len, dim, len
+                # -> batch, heads, len, 1, len -> batch, heads, len, len
+                scores = q_k + relmatmul * rel_mask.unsqueeze(1)
+            ####### tree relative attention #######
+
         else:
             scores = q_k
         scores = scores.float()  # ?
@@ -247,8 +284,10 @@ class TransformerModel(nn.Module):
         self.dropout = params.dropout
         self.attention_dropout = params.attention_dropout
         assert self.dim % self.n_heads == 0, 'transformer dim must be a multiple of n_heads'
-        self.max_relative_pos = 0 if 'max_relative_pos' not in params else params.max_relative_pos
-        self.use_neg_dist = False if 'use_neg_dist' not in params else params.use_neg_dist
+        self.max_relative_pos = params.max_relative_pos
+        self.use_neg_dist = params.use_neg_dist
+        self.use_tree_rel_att = None if params.use_tree_relative_att == "" else params.use_tree_rel_att
+        self.tree_rel_vocab_size = params.tree_rel_vocab_size
 
         # embeddings
         self.use_pos_embeddings = params.use_pos_embeddings
@@ -270,7 +309,8 @@ class TransformerModel(nn.Module):
 
         for layer_id in range(self.n_layers):
             self.attentions.append(MultiHeadAttention(self.n_heads, self.dim, dropout=self.attention_dropout,
-                                   max_relative_positions=self.max_relative_pos, use_neg_dist=self.use_neg_dist))
+                                   max_relative_positions=self.max_relative_pos, use_neg_dist=self.use_neg_dist,
+                                   use_tree_rel_att=self.use_tree_rel_att, tree_rel_vocab_size=self.tree_rel_vocab_size))
             self.layer_norm1.append(nn.LayerNorm(self.dim, eps=1e-12))
             if self.is_decoder:
                 self.layer_norm15.append(nn.LayerNorm(self.dim, eps=1e-12))
@@ -296,7 +336,8 @@ class TransformerModel(nn.Module):
         else:
             raise Exception("Unknown mode: %s" % mode)
 
-    def fwd(self, x, lengths, causal, src_enc=None, src_len=None, positions=None, cache=None, previous_state=None):
+    def fwd(self, x, lengths, causal, src_enc=None, src_len=None, positions=None, cache=None, previous_state=None,
+            rel_matrix=None, rel_lens=None):
         """
         Inputs:
             `x` LongTensor(slen, bs), containing word indices
@@ -312,6 +353,8 @@ class TransformerModel(nn.Module):
         assert lengths.size(0) == bs
         assert lengths.max().item() <= slen
         x = x.transpose(0, 1)  # batch size as dimension 0
+        if rel_matrix is not None:
+            rel_matrix = rel_matrix.transpose(0, 2)   # s_len, s_len, bs ->  bs, s_len, s_len
         assert (src_enc is None) == (src_len is None)
         if src_enc is not None:
             assert self.is_decoder
@@ -322,6 +365,8 @@ class TransformerModel(nn.Module):
         mask, attn_mask = get_masks(slen, lengths, causal)
         if self.is_decoder and src_enc is not None:
             src_mask = torch.arange(src_len.max(), dtype=torch.long, device=lengths.device) < src_len[:, None]
+        rel_mask = None if rel_matrix is None else \
+            get_rel_mask(rel_lens, rel_matrix.shape[1])   # bs, s_len, s_len
 
         # positions
         if positions is None:
@@ -352,6 +397,7 @@ class TransformerModel(nn.Module):
             tensor = F.dropout(tensor, p=self.dropout, training=self.training)
             tensor *= mask.unsqueeze(-1).to(tensor.dtype)
         else:
+            print('previous_state is not None, look')
             assert previous_state.shape == (slen, bs, self.dim)
             tensor = previous_state.transpose(0, 1)
         if TransformerModel.STORE_OUTPUTS and not self.training:
@@ -361,7 +407,7 @@ class TransformerModel(nn.Module):
         for i in range(self.n_layers):
 
             # self attention
-            attn = self.attentions[i](tensor, attn_mask, cache=cache)
+            attn = self.attentions[i](tensor, attn_mask, cache=cache, rel_matrix=rel_matrix, rel_mask=rel_mask)
             attn = F.dropout(attn, p=self.dropout, training=self.training)
             tensor = tensor + attn
             tensor = self.layer_norm1[i](tensor)

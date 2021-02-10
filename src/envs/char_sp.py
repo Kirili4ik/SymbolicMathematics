@@ -24,6 +24,9 @@ from sympy.core.cache import clear_cache
 from sympy.integrals.risch import NonElementaryIntegral
 from sympy.calculus.util import AccumBounds
 
+import json
+from ..misc import FileReader
+
 from ..utils import bool_flag
 from ..utils import timeout, TimeoutError
 from .sympy_utils import remove_root_constant_terms, reduce_coefficients, reindex_coefficients
@@ -1318,7 +1321,7 @@ class CharSPEnvironment(object):
         parser.add_argument("--clean_prefix_expr", type=bool_flag, default=True,
                             help="Clean prefix expressions (f x -> Y, derivative f x x -> Y')")
 
-    def create_train_iterator(self, task, params, data_path):
+    def create_train_iterator(self, task, params, data_path, rel_matrices_path=None, rel_vocab_path=None):
         """
         Create a dataset for this environment.
         """
@@ -1330,18 +1333,21 @@ class CharSPEnvironment(object):
             train=True,
             rng=None,
             params=params,
-            path=(None if data_path is None else data_path[task][0])
+            path=(None if data_path is None else data_path[task][0]),
+            rel_matrices_path=(None if rel_matrices_path is None else rel_matrices_path[task][0]),
+            rel_vocab_path=rel_vocab_path
         )
+        collate_fn = dataset.return_collate()
         return DataLoader(
             dataset,
             timeout=(0 if params.num_workers == 0 else 1800),
             batch_size=params.batch_size,
             num_workers=(params.num_workers if data_path is None or params.num_workers == 0 else 1),
             shuffle=False,
-            collate_fn=dataset.collate_fn
+            collate_fn=collate_fn
         )
 
-    def create_test_iterator(self, data_type, task, params, data_path):
+    def create_test_iterator(self, data_type, task, params, data_path, rel_matrices_path=None, rel_vocab_path=None):
         """
         Create a dataset for this environment.
         """
@@ -1354,21 +1360,24 @@ class CharSPEnvironment(object):
             train=False,
             rng=np.random.RandomState(0),
             params=params,
-            path=(None if data_path is None else data_path[task][1 if data_type == 'valid' else 2])
+            path=(None if data_path is None else data_path[task][1 if data_type == 'valid' else 2]),
+            rel_matrices_path=(None if rel_matrices_path is None else rel_matrices_path[task][1 if data_type == 'valid' else 2]),
+            rel_vocab_path=rel_vocab_path
         )
+        collate_fn = dataset.return_collate()
         return DataLoader(
             dataset,
             timeout=0,
             batch_size=params.batch_size,
             num_workers=1,
             shuffle=False,
-            collate_fn=dataset.collate_fn
+            collate_fn=collate_fn
         )
 
 
 class EnvDataset(Dataset):
 
-    def __init__(self, env, task, train, rng, params, path):
+    def __init__(self, env, task, train, rng, params, path, rel_matrices_path=None, rel_vocab_path=None):
         super(EnvDataset).__init__()
         self.env = env
         self.rng = rng
@@ -1377,10 +1386,14 @@ class EnvDataset(Dataset):
         self.batch_size = params.batch_size
         self.env_base_seed = params.env_base_seed
         self.path = path
+        self.rel_matrices_path = rel_matrices_path
+        self.rel_vocab_path = rel_vocab_path
         self.global_rank = params.global_rank
         self.count = 0
         assert (train is True) == (rng is None)
         assert task in CharSPEnvironment.TRAINING_TASKS
+
+        self.file_reader = FileReader(self.rel_matrices_path)
 
         # batching
         self.num_workers = params.num_workers
@@ -1406,11 +1419,27 @@ class EnvDataset(Dataset):
             self.data = [xy for xy in self.data if len(xy) == 2]
             logger.info(f"Loaded {len(self.data)} equations from the disk.")
 
+        # reloading from file relation matrices for tree rel att
+        if self.rel_matrices_path is not None:
+            with open(self.rel_vocab_path, 'r') as f:
+                temp = f.read().splitlines()
+                words = [word for word in temp]
+            self.rel_id2word = {(i + 2): s for i, s in enumerate(words)}
+            self.rel_id2word[0] = 'EOS'
+            self.rel_id2word[1] = 'PAD'
+            self.rel_word2id = {s: i for i, s in self.rel_id2word.items()}
+
         # dataset size: infinite iterator for train, finite for valid / test (default of 5000 if no file provided)
         if self.train:
             self.size = 1 << 60
         else:
             self.size = 5000 if path is None else len(self.data)
+
+    def return_collate(self):
+        if self.rel_matrices_path is None:
+            return self.collate_fn
+        else:
+            return self.collate_fn_relmat
 
     def collate_fn(self, elements):
         """
@@ -1427,6 +1456,33 @@ class EnvDataset(Dataset):
         x, x_len = self.env.batch_sequences(x)
         y, y_len = self.env.batch_sequences(y)
         return (x, x_len), (y, y_len), torch.LongTensor(nb_ops)
+
+    def collate_fn_relmat(self, elements):
+        x, y, rel_matrix = zip(*elements)
+        nb_ops = [sum(int(word in self.env.OPERATORS) for word in seq) for seq in x]
+        x = [torch.LongTensor([self.env.word2id[w] for w in seq if w in self.env.word2id]) for seq in x]
+        y = [torch.LongTensor([self.env.word2id[w] for w in seq if w in self.env.word2id]) for seq in y]
+        rel_matrices = []
+        for i, sample in enumerate(rel_matrix):
+            rel_matrices.append([torch.LongTensor([self.rel_word2id[w] for w in row if w in self.rel_word2id]) for row in sample])
+            assert len(x[i]) == rel_matrices[i][0].size()[0]   # квадратная матрица
+
+        ##############
+        lengths = torch.LongTensor([len(s) + 2 for s in rel_matrices])
+        rel_matrices_batch = torch.LongTensor(lengths.max().item(), lengths.max().item(), lengths.size(0)).fill_(1)   # 1 is for PAD
+
+        rel_matrices_batch[0, 0, :] = 0  # 0 is for EOS
+        for i, s in enumerate(rel_matrices):
+            rel_matrices_batch[1:lengths[i]-1, 1:lengths[i]-1, i].copy_(s)
+            rel_matrices_batch[lengths[i]-1, i] = 0   # 0 is for EOS
+
+        # (SRC_LEN, SRC_LEN, BS)
+
+        ##############
+
+        x, x_len = self.env.batch_sequences(x)
+        y, y_len = self.env.batch_sequences(y)
+        return (x, x_len), (y, y_len), (rel_matrices_batch, lengths), torch.LongTensor(nb_ops)
 
     def init_rng(self):
         """
@@ -1473,9 +1529,15 @@ class EnvDataset(Dataset):
         if self.train:
             index = self.rng.randint(len(self.data))
         x, y = self.data[index]
+
         x = x.split()
         y = y.split()
         assert len(x) >= 1 and len(y) >= 1
+        if self.rel_matrices_path is not None:
+            line = self.file_reader.get_line(index).strip()
+            rel_matrix = json.loads(line)
+            rel_matrix = [line.split() for line in rel_matrix]
+            return x, y, rel_matrix
         return x, y
 
     def generate_sample(self):

@@ -78,10 +78,14 @@ def get_parser():
                         help='Use positional embeddings')
     parser.add_argument("--sinusoidal_embeddings", type=bool_flag, default=False,
                         help="Use sinusoidal embeddings")
-    parser.add_argument('--max_relative_pos', type=int,
-                        default=0, help='Max value for relative position representations')
-    parser.add_argument('--use_neg_dist', type=bool_flag, default=True,
-                        help='Use negative Max value for relative position representations')
+    parser.add_argument('--max_relative_pos', type=int, default=0,
+                        help='Max value for relative position representations')
+    parser.add_argument('--use_neg_dist', type=bool_flag, default=False,
+                        help='Use negative distance for relative position representations')
+    parser.add_argument('--use_tree_relative_att', type=str, default="",
+                        help='Type of tree relative attention to use. Requires reload_rel_matrices & tree_rel_vocab_size')
+    parser.add_argument('--tree_rel_vocab_size', type=int, default=0,
+                       help='maximum number of relations in tree')
 
 
     # training parameters
@@ -119,6 +123,10 @@ def get_parser():
                         help="Load dataset from the disk (task1,train_path1,valid_path1,test_path1;task2,train_path2,valid_path2,test_path2)")
     parser.add_argument("--reload_size", type=int, default=-1,
                         help="Reloaded training set size (-1 for everything)")
+    parser.add_argument('--reload_rel_matrices', type=str, default="",
+                       help="Preprocessed relative matrices files (task1,train_path1,valid_path1,test_path1;task2,train_path2,valid_path2,test_path2)")
+    parser.add_argument('--rel_vocab_path', type=str, default="",
+                        help="File with vocabulary for tree relative attention")
 
     # environment parameters
     parser.add_argument("--env_name", type=str, default="char_sp",
