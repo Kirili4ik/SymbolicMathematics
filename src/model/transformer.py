@@ -177,18 +177,18 @@ class MultiHeadAttention(nn.Module):
         elif kv is None and self.use_tree_rel_att is not None:
 
             ####### tree relative attention #######
-            if self.use_tree_relative_attn == "mult1":
+            if self.use_tree_rel_att == "mult1":
                 tree_relative = self.tree_relative_embeddings(rel_matrix). \
                     permute(0, 3, 1, 2)
                 # batch x query_len x key_len x num_heads
                 scores = q_k * (tree_relative * rel_mask.unsqueeze(1)) + \
                          q_k * (1 - rel_mask.unsqueeze(1))
-            elif self.use_tree_relative_attn == "mult2":
+            elif self.use_tree_rel_att == "mult2":
                 tree_relative = self.tree_relative_embeddings(rel_matrix). \
                     permute(0, 3, 1, 2)
                 # batch x query_len x key_len x num_heads
                 scores = q_k + (tree_relative * rel_mask.unsqueeze(1))
-            elif self.use_tree_relative_attn == "addit":
+            elif self.use_tree_rel_att == "addit":
                 # rel_matrix # batch x len x len
                 tree_relation_keys = self.tree_relative_embeddings_k(rel_matrix)
                 tree_relation_values = self.tree_relative_embeddings_v(rel_matrix)
@@ -286,7 +286,7 @@ class TransformerModel(nn.Module):
         assert self.dim % self.n_heads == 0, 'transformer dim must be a multiple of n_heads'
         self.max_relative_pos = params.max_relative_pos
         self.use_neg_dist = params.use_neg_dist
-        self.use_tree_rel_att = None if params.use_tree_relative_att == "" else params.use_tree_rel_att
+        self.use_tree_rel_att = None if params.use_tree_rel_att == "" else params.use_tree_rel_att
         self.tree_rel_vocab_size = params.tree_rel_vocab_size
 
         # embeddings
