@@ -43,12 +43,12 @@ broken_lines = \
  44598911}
 
 
-with open('data/prim_fwd.train', 'r') as f, open('data/prim_fwd.train_clean', 'w') as f_new:
-    for i, line in enumerate(f):
-        if i in broken_lines:
-            continue
-        else:
-            f_new.write(line)
+#with open('data/prim_fwd.train', 'r') as f, open('data/prim_fwd.train_clean', 'w') as f_new:
+#    for i, line in enumerate(f):
+#        if i in broken_lines:
+#            continue
+#        else:
+#            f_new.write(line)
 
 
 
@@ -183,11 +183,10 @@ def get_ud_masks(ancestors, levels, exp_len):
 
 
 import json
-import jsonlines
 
 for set_name in ['test', 'valid', 'train_clean']:
     with open('data/prim_fwd.' + set_name, 'r') as expressions:
-        with jsonlines.open('data/rel_matrix_'+set_name+'.jsonl', 'w') as rel_matrix_json:
+        with open('data/rel_matrix_'+set_name+'.json', 'w') as rel_matrix_json:
             for i, line in tqdm(enumerate(expressions)):
                 #print(line)
                 qa = line.split('|')[1].split('\t')
@@ -210,4 +209,4 @@ for set_name in ['test', 'valid', 'train_clean']:
                 #ancestors, levels = get_ancestors(a, len(a))
                 #rel_matrix_a = get_ud_masks(ancestors, levels, len(a))
 
-                rel_matrix_json.write(json.dumps(rel_matrix_q, indent=0))
+                rel_matrix_json.write(json.dumps(rel_matrix_q) + '\n')
