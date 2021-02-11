@@ -1436,6 +1436,7 @@ class EnvDataset(Dataset):
             self.size = 5000 if path is None else len(self.data)
 
     def return_collate(self):
+        # logger.info('im in return collate')
         if self.rel_matrices_path is None:
             return self.collate_fn
         else:
@@ -1458,6 +1459,7 @@ class EnvDataset(Dataset):
         return (x, x_len), (y, y_len), torch.LongTensor(nb_ops)
 
     def collate_fn_relmat(self, elements):
+        # logger.info('im in collate fn relmat')
         x, y, rel_matrix = zip(*elements)
         nb_ops = [sum(int(word in self.env.OPERATORS) for word in seq) for seq in x]
         x = [torch.LongTensor([self.env.word2id[w] for w in seq if w in self.env.word2id]) for seq in x]
@@ -1516,6 +1518,7 @@ class EnvDataset(Dataset):
         Return a training sample.
         Either generate it, or read it from file.
         """
+        # logger.info('i m in getitem')
         self.init_rng()
         if self.path is None:
             return self.generate_sample()
@@ -1526,6 +1529,7 @@ class EnvDataset(Dataset):
         """
         Read a sample.
         """
+        # logger.info('im in read_sample')
         if self.train:
             index = self.rng.randint(len(self.data))
         x, y = self.data[index]
@@ -1534,9 +1538,13 @@ class EnvDataset(Dataset):
         y = y.split()
         assert len(x) >= 1 and len(y) >= 1
         if self.rel_matrices_path is not None:
+            # logger.info('i m reading')
             line = self.file_reader.get_line(index).strip()
+            # logger.info('read line')
             rel_matrix = json.loads(line)
+            # logger.info('did json')
             rel_matrix = [line.split() for line in rel_matrix]
+            # logger.info('read')
             return x, y, rel_matrix
         return x, y
 
