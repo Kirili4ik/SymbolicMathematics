@@ -7,4 +7,4 @@
 
 source activate sym-math
 srun python preprocess_build_relmat.py
-srun python preprocess_build_relmat_dict.py
+#srun python preprocess_build_relmat_dict.py
