@@ -184,7 +184,7 @@ def get_ud_masks(ancestors, levels, exp_len):
 
 import json
 
-for set_name in ['test', 'valid']:
+for set_name in ['test', 'valid', 'train_clean']:
     with open('data/prim_fwd.' + set_name, 'r') as expressions:
         with open('data/rel_matrix_'+set_name+'.json', 'w') as rel_matrix_json:
             for i, line in tqdm(enumerate(expressions)):
