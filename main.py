@@ -87,7 +87,7 @@ def get_parser():
     parser.add_argument('--use_tree_rel_att', type=str, default="",
                         help='Type of tree relative attention to use. Requires reload_rel_matrices & tree_rel_vocab_size')
     parser.add_argument('--tree_rel_vocab_size', type=int, default=0,
-                       help='maximum number of relations in tree')
+                        help='maximum number of relations in tree')
 
 
     # training parameters
