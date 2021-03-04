@@ -1,4 +1,5 @@
 import torch
+import multiprocessing as mp
 
 
 def generate_relative_positions_matrix(length,
@@ -72,3 +73,32 @@ class FileReader:
     def get_line(self, index):
         self.fin.seek(self.line_map[index])
         return self.fin.readline()
+
+
+class FileReaders:
+    def __init__(self, filename, num_workers):
+        self.filename = filename
+        self.fds = []
+        self.locks = []
+        self.num_fds = 0
+        self.global_lock = mp.Lock()
+        #for i in range(num_workers):
+        #    print('num worker number ', i)
+        #    self.locks.append(False)
+        #    self.fds.append(FileReader(self.filename))
+        #    self.num_fds += 1
+
+    def get_fd(self):
+        res = -1
+        with self.global_lock:
+            for i in range(self.num_fds):
+                if not self.locks[i]:
+                    res = i
+                    break
+            if res == -1:
+                self.locks.append(False)
+                self.fds.append(FileReader(self.filename))
+                res = self.num_fds
+                self.num_fds += 1
+            self.locks[res] = True
+        return self.fds[res], res

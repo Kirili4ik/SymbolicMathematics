@@ -150,12 +150,13 @@ class Evaluator(object):
         # iterator
         iterator = self.env.create_test_iterator(data_type, task, params=params, data_path=self.trainer.data_path,
                                                  rel_matrices_path=self.trainer.rel_matrices_path,
-                                                 rel_vocab_path=self.trainer.rel_vocab_path)
+                                                 rel_vocab_path=self.trainer.params.rel_vocab_path,
+                                                 tree_rel_vocab_size=self.trainer.params.tree_rel_vocab_size)
         eval_size = len(iterator.dataset)
 
         for elem in iterator:
             if self.trainer.rel_matrices_path is not None:
-                (x1, len1), (x2, len2), (), nb_ops = elem
+                (x1, len1), (x2, len2), (rel_matrices_batch, rel_lens), nb_ops = elem
             else:
                 (x1, len1), (x2, len2), nb_ops = elem
                 rel_matrices_batch = None

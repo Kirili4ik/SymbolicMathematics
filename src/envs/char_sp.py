@@ -25,7 +25,7 @@ from sympy.integrals.risch import NonElementaryIntegral
 from sympy.calculus.util import AccumBounds
 
 import json
-from ..misc import FileReader
+from ..misc import FileReaders
 
 from ..utils import bool_flag
 from ..utils import timeout, TimeoutError
@@ -1321,7 +1321,8 @@ class CharSPEnvironment(object):
         parser.add_argument("--clean_prefix_expr", type=bool_flag, default=True,
                             help="Clean prefix expressions (f x -> Y, derivative f x x -> Y')")
 
-    def create_train_iterator(self, task, params, data_path, rel_matrices_path=None, rel_vocab_path=None):
+    def create_train_iterator(self, task, params, data_path, 
+                              rel_matrices_path=None, rel_vocab_path=None, tree_rel_vocab_size=0):
         """
         Create a dataset for this environment.
         """
@@ -1335,7 +1336,8 @@ class CharSPEnvironment(object):
             params=params,
             path=(None if data_path is None else data_path[task][0]),
             rel_matrices_path=(None if rel_matrices_path is None else rel_matrices_path[task][0]),
-            rel_vocab_path=rel_vocab_path
+            rel_vocab_path=rel_vocab_path,
+            tree_rel_vocab_size=tree_rel_vocab_size
         )
         collate_fn = dataset.return_collate()
         return DataLoader(
@@ -1347,7 +1349,8 @@ class CharSPEnvironment(object):
             collate_fn=collate_fn
         )
 
-    def create_test_iterator(self, data_type, task, params, data_path, rel_matrices_path=None, rel_vocab_path=None):
+    def create_test_iterator(self, data_type, task, params, data_path, 
+                             rel_matrices_path=None, rel_vocab_path=None, tree_rel_vocab_size=0):
         """
         Create a dataset for this environment.
         """
@@ -1362,7 +1365,8 @@ class CharSPEnvironment(object):
             params=params,
             path=(None if data_path is None else data_path[task][1 if data_type == 'valid' else 2]),
             rel_matrices_path=(None if rel_matrices_path is None else rel_matrices_path[task][1 if data_type == 'valid' else 2]),
-            rel_vocab_path=rel_vocab_path
+            rel_vocab_path=rel_vocab_path,
+            tree_rel_vocab_size=tree_rel_vocab_size
         )
         collate_fn = dataset.return_collate()
         return DataLoader(
@@ -1377,7 +1381,7 @@ class CharSPEnvironment(object):
 
 class EnvDataset(Dataset):
 
-    def __init__(self, env, task, train, rng, params, path, rel_matrices_path=None, rel_vocab_path=None):
+    def __init__(self, env, task, train, rng, params, path, rel_matrices_path=None, rel_vocab_path=None, tree_rel_vocab_size=0):
         super(EnvDataset).__init__()
         self.env = env
         self.rng = rng
@@ -1388,12 +1392,15 @@ class EnvDataset(Dataset):
         self.path = path
         self.rel_matrices_path = rel_matrices_path
         self.rel_vocab_path = rel_vocab_path
+        self.tree_rel_vocab_size = tree_rel_vocab_size
         self.global_rank = params.global_rank
         self.count = 0
         assert (train is True) == (rng is None)
         assert task in CharSPEnvironment.TRAINING_TASKS
 
-        self.file_reader = FileReader(self.rel_matrices_path)
+        self.file_readers = FileReaders(self.rel_matrices_path, params.num_workers) if self.rel_matrices_path is not None else None
+        logger.info('rel mat path is')
+        logger.info(self.rel_matrices_path)
 
         # batching
         self.num_workers = params.num_workers
@@ -1424,6 +1431,9 @@ class EnvDataset(Dataset):
             with open(self.rel_vocab_path, 'r') as f:
                 temp = f.read().splitlines()
                 words = [word for word in temp]
+            if self.tree_rel_vocab_size != 0:
+                words = words[:self.tree_rel_vocab_size + 1]
+                words.append('unk')
             self.rel_id2word = {(i + 2): s for i, s in enumerate(words)}
             self.rel_id2word[0] = 'EOS'
             self.rel_id2word[1] = 'PAD'
@@ -1466,17 +1476,26 @@ class EnvDataset(Dataset):
         y = [torch.LongTensor([self.env.word2id[w] for w in seq if w in self.env.word2id]) for seq in y]
         rel_matrices = []
         for i, sample in enumerate(rel_matrix):
-            rel_matrices.append([torch.LongTensor([self.rel_word2id[w] for w in row if w in self.rel_word2id]) for row in sample])
+            rel_matrices.append(
+                torch.stack(
+                    [torch.LongTensor([self.rel_word2id[w] if w in self.rel_word2id else self.rel_word2id['unk'] for w in row])
+                     for row in sample]
+                )
+            )
             assert len(x[i]) == rel_matrices[i][0].size()[0]   # квадратная матрица
+
 
         ##############
         lengths = torch.LongTensor([len(s) + 2 for s in rel_matrices])
         rel_matrices_batch = torch.LongTensor(lengths.max().item(), lengths.max().item(), lengths.size(0)).fill_(1)   # 1 is for PAD
 
-        rel_matrices_batch[0, 0, :] = 0  # 0 is for EOS
+        rel_matrices_batch[:, 0, :] = 0  # 0 is for EOS
+        rel_matrices_batch[0, :, :] = 0  # 0 is for EOS
+
         for i, s in enumerate(rel_matrices):
             rel_matrices_batch[1:lengths[i]-1, 1:lengths[i]-1, i].copy_(s)
-            rel_matrices_batch[lengths[i]-1, i] = 0   # 0 is for EOS
+            rel_matrices_batch[lengths[i]-1, :, i] = 0   # 0 is for EOS
+            rel_matrices_batch[:, lengths[i]-1, i] = 0   # 0 is for EOS
 
         # (SRC_LEN, SRC_LEN, BS)
 
@@ -1539,12 +1558,16 @@ class EnvDataset(Dataset):
         assert len(x) >= 1 and len(y) >= 1
         if self.rel_matrices_path is not None:
             # logger.info('i m reading')
-            line = self.file_reader.get_line(index).strip()
+            file_reader, num_fd = self.file_readers.get_fd()
+            #logger.info(file_reader)
+            line = file_reader.get_line(index).strip()
             # logger.info('read line')
+            # logger.info(line)
             rel_matrix = json.loads(line)
             # logger.info('did json')
             rel_matrix = [line.split() for line in rel_matrix]
-            # logger.info('read')
+            with self.file_readers.global_lock:
+                self.file_readers.locks[num_fd] = False
             return x, y, rel_matrix
         return x, y
 

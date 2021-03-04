@@ -89,10 +89,10 @@ class MultiHeadAttention(nn.Module):
             self.relative_positions_embeddings_v = nn.Embedding(vocab_size, dim // n_heads)
         self.use_tree_rel_att = use_tree_rel_att
         if use_tree_rel_att in {"mult1", "mult2"}:
-            self.tree_relative_embeddings = nn.Embedding(tree_rel_vocab_size,
+            self.tree_relative_embeddings = nn.Embedding(tree_rel_vocab_size + 5,
                                                          n_heads)
         elif use_tree_rel_att == "addit":
-            self.tree_relative_embeddings_k = nn.Embedding(tree_rel_vocab_size,
+            self.tree_relative_embeddings_k = nn.Embedding(tree_rel_vocab_size + 5,
                                                            dim // n_heads)
             self.tree_relative_embeddings_v = nn.Embedding(n_heads,
                                                            dim // n_heads)
@@ -175,6 +175,10 @@ class MultiHeadAttention(nn.Module):
 
             scores = q_k + res1
         elif kv is None and self.use_tree_rel_att is not None:
+
+            # logger.info(rel_matrix.size())
+            # logger.info(rel_mask.size())
+            # logger.info('done')
 
             ####### tree relative attention #######
             if self.use_tree_rel_att == "mult1":
@@ -286,12 +290,16 @@ class TransformerModel(nn.Module):
         assert self.dim % self.n_heads == 0, 'transformer dim must be a multiple of n_heads'
         self.max_relative_pos = params.max_relative_pos
         self.use_neg_dist = params.use_neg_dist
-        self.use_tree_rel_att = None if params.use_tree_rel_att == "" else params.use_tree_rel_att
+        if is_encoder:
+            self.use_tree_rel_att = None if params.use_tree_rel_att == "" else params.use_tree_rel_att
+        else:
+            self.use_tree_rel_att = None
         self.tree_rel_vocab_size = params.tree_rel_vocab_size
 
         # embeddings
-        self.use_pos_embeddings = params.use_pos_embeddings
-        if params.use_pos_embeddings:
+        self.use_pos_embeddings_E = params.use_pos_embeddings_E
+        self.use_pos_embeddings_D = params.use_pos_embeddings_D
+        if (self.is_encoder and self.use_pos_embeddings_E) or (self.is_decoder and self.use_pos_embeddings_D):
             self.position_embeddings = Embedding(N_MAX_POSITIONS, self.dim)
             if params.sinusoidal_embeddings:
                 create_sinusoidal_embeddings(N_MAX_POSITIONS, self.dim, out=self.position_embeddings.weight)
@@ -391,7 +399,7 @@ class TransformerModel(nn.Module):
         # embeddings
         if previous_state is None:
             tensor = self.embeddings(x)
-            if self.use_pos_embeddings:
+            if (self.is_encoder and self.use_pos_embeddings_E) or (self.is_decoder and self.use_pos_embeddings_D):
                 tensor = tensor + self.position_embeddings(positions).expand_as(tensor)
             tensor = self.layer_norm_emb(tensor)
             tensor = F.dropout(tensor, p=self.dropout, training=self.training)

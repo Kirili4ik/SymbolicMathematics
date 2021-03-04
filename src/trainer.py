@@ -137,7 +137,7 @@ class Trainer(object):
         # reload tree relative attention matrices
         if params.reload_rel_matrices != '':
             assert params.export_data is False
-            s = [x.split(',') for x in params.reload_data.split(';') if len(x) > 0]
+            s = [x.split(',') for x in params.reload_rel_matrices.split(';') if len(x) > 0]
             assert len(s) >= 1 and all(len(x) == 4 for x in s) and len(s) == len(set([x[0] for x in s]))
             self.rel_matrices_path = {task: (train_path, valid_path, test_path) for task, train_path, valid_path, test_path
                               in s}
@@ -153,7 +153,7 @@ class Trainer(object):
                 params.env_base_seed = np.random.randint(1_000_000_000)
             self.dataloader = {
                 task: iter(self.env.create_train_iterator(task, params, self.data_path,
-                                                          self.rel_matrices_path, self.params.rel_vocab_path))
+                                                          self.rel_matrices_path, self.params.rel_vocab_path, params.tree_rel_vocab_size))
                 for task in params.tasks
             }
 
