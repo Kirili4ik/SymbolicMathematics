@@ -94,7 +94,7 @@ class MultiHeadAttention(nn.Module):
         elif use_tree_rel_att == "addit":
             self.tree_relative_embeddings_k = nn.Embedding(tree_rel_vocab_size + 5,
                                                            dim // n_heads)
-            self.tree_relative_embeddings_v = nn.Embedding(n_heads,
+            self.tree_relative_embeddings_v = nn.Embedding(tree_rel_vocab_size + 5,      # n_heads?
                                                            dim // n_heads)
 
     def forward(self, input, mask, kv=None, cache=None, rel_matrix=None, rel_mask=None):
@@ -205,6 +205,8 @@ class MultiHeadAttention(nn.Module):
                 scores = q_k + relmatmul * rel_mask.unsqueeze(1)
             ####### tree relative attention #######
 
+
+
         else:
             scores = q_k
         scores = scores.float()  # ?
@@ -231,6 +233,13 @@ class MultiHeadAttention(nn.Module):
 
             context = context + res2
             # weights: batch, heads, seq, 2seq (or usually bs, heads, seq, seq)
+
+        if kv is None and self.use_tree_relative_attn == "addit":
+            relmatmul = torch.matmul(weights[:, :, :, None, :], \
+                                     tree_relation_values[:, None, :, :, :] * rel_mask.unsqueeze(3)).\
+                                     squeeze(3)
+                        # batch, heads, len, dim
+            context = context + relmatmul
 
         context = unshape(context)                                            # (bs, qlen, dim)
 
