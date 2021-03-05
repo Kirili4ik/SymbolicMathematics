@@ -234,7 +234,7 @@ class MultiHeadAttention(nn.Module):
             context = context + res2
             # weights: batch, heads, seq, 2seq (or usually bs, heads, seq, seq)
 
-        if kv is None and self.use_tree_relative_attn == "addit":
+        if kv is None and self.use_tree_rel_att == "addit":
             relmatmul = torch.matmul(weights[:, :, :, None, :], \
                                      tree_relation_values[:, None, :, :, :] * rel_mask.unsqueeze(3)).\
                                      squeeze(3)
