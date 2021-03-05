@@ -94,7 +94,7 @@ class MultiHeadAttention(nn.Module):
         elif use_tree_rel_att == "addit":
             self.tree_relative_embeddings_k = nn.Embedding(tree_rel_vocab_size + 5,
                                                            dim // n_heads)
-            self.tree_relative_embeddings_v = nn.Embedding(tree_rel_vocab_size + 5,      # n_heads?
+            self.tree_relative_embeddings_v = nn.Embedding(n_heads,      # n_heads?
                                                            dim // n_heads)
 
     def forward(self, input, mask, kv=None, cache=None, rel_matrix=None, rel_mask=None):
