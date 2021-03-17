@@ -265,11 +265,19 @@ class Evaluator(object):
         n_total = torch.zeros(1000, dtype=torch.long)
 
         # iterator
-        iterator = env.create_test_iterator(data_type, task, params=params, data_path=self.trainer.data_path)
+        iterator = self.env.create_test_iterator(data_type, task, params=params, data_path=self.trainer.data_path,
+                                                 rel_matrices_path=self.trainer.rel_matrices_path,
+                                                 rel_vocab_path=self.trainer.params.rel_vocab_path,
+                                                 tree_rel_vocab_size=self.trainer.params.tree_rel_vocab_size)
         eval_size = len(iterator.dataset)
 
-        for (x1, len1), (x2, len2), nb_ops in iterator:
-
+        for elem in iterator:
+            if self.trainer.rel_matrices_path is not None:
+                (x1, len1), (x2, len2), (rel_matrices_batch, rel_lens), nb_ops = elem
+            else:
+                (x1, len1), (x2, len2), nb_ops = elem
+                rel_matrices_batch = None
+                rel_lens = None
             # target words to predict
             alen = torch.arange(len2.max(), dtype=torch.long, device=len2.device)
             pred_mask = alen[:, None] < len2[None] - 1  # do not predict anything given the last target word
@@ -277,11 +285,12 @@ class Evaluator(object):
             assert len(y) == (len2 - 1).sum().item()
 
             # cuda
-            x1, len1, x2, len2, y = to_cuda(x1, len1, x2, len2, y)
+            x1, len1, x2, len2, y, rel_matrices_batch, rel_lens = to_cuda(x1, len1, x2, len2, y, rel_matrices_batch,
+                                                                          rel_lens)
             bs = len(len1)
 
             # forward
-            encoded = encoder('fwd', x=x1, lengths=len1, causal=False)
+            encoded = encoder('fwd', x=x1, lengths=len1, causal=False, rel_matrix=rel_matrices_batch, rel_lens=rel_lens)
             decoded = decoder('fwd', x=x2, lengths=len2, causal=True, src_enc=encoded.transpose(0, 1), src_len=len1)
             word_scores, loss = decoder('predict', tensor=decoded, pred_mask=pred_mask, y=y, get_scores=True)
 
