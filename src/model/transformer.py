@@ -147,7 +147,7 @@ class MultiHeadAttention(nn.Module):
             relative_positions_matrix = generate_relative_positions_matrix(   # 1 or klen x klen
                 key_len, self.max_relative_positions, self.use_neg_dist,
                 cache=True if cache is not None else False)
-            logger.info(relative_positions_matrix)
+            #logger.info(relative_positions_matrix)
 
             #print('generated rel pos matrix size', relative_positions_matrix.size())
             #print('generated rel pos matrix')
@@ -164,8 +164,8 @@ class MultiHeadAttention(nn.Module):
 
         if kv is None and self.max_relative_positions > 0:
 
-            logger.info(q.size())
-            logger.info(relations_k.size())
+            #logger.info(q.size())
+            #logger.info(relations_k.size())
 
             #print('query')
             #print(q)
@@ -225,9 +225,9 @@ class MultiHeadAttention(nn.Module):
             #print('weights or drop(softmax(mask(q_k))) size', weights.size())
             #print('weights or drop(softmax(mask(q_k)))')
             #print(weights)
-            logger.info(weights.size())
-            logger.info(weights[:, :, :, :weights.shape[-2]].size())
-            logger.info(relations_v.size())
+            #logger.info(weights.size())
+            #logger.info(weights[:, :, :, :weights.shape[-2]].size())
+            #logger.info(relations_v.size())
 
                                                    #: weights.shape[-2]]
             res2 = relative_matmul(weights[:, :, :, :],
@@ -242,8 +242,8 @@ class MultiHeadAttention(nn.Module):
             # weights: batch, heads, seq, 2seq (or usually bs, heads, seq, seq)
 
         if kv is None and self.use_tree_rel_att == "addit":
-            logger.info(weights.size())
-            logger.info(tree_relation_values.size())
+            #logger.info(weights.size())
+            #logger.info(tree_relation_values.size())
             relmatmul = torch.matmul(weights[:, :, :, None, :], \
                                      tree_relation_values[:, None, :, :, :] * rel_mask.unsqueeze(3)).\
                                      squeeze(3)
