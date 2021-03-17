@@ -163,7 +163,9 @@ class MultiHeadAttention(nn.Module):
 
         if kv is None and self.max_relative_positions > 0:
 
-            #print('query size', q.size())
+            logger.info('query size', q.size())
+            logger.info('relations_k size', relations_k.size())
+
             #print('query')
             #print(q)
 
@@ -222,6 +224,9 @@ class MultiHeadAttention(nn.Module):
             #print('weights or drop(softmax(mask(q_k))) size', weights.size())
             #print('weights or drop(softmax(mask(q_k)))')
             #print(weights)
+            logger.info('w1', weights.size())
+            logger.info('w2', weights[:, :, :, :weights.shape[-2]].size())
+            logger.info('relations_v size', relations_v.size())
 
             res2 = relative_matmul(weights[:, :, :, :weights.shape[-2]],
                                                 relations_v,
