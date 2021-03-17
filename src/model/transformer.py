@@ -147,6 +147,7 @@ class MultiHeadAttention(nn.Module):
             relative_positions_matrix = generate_relative_positions_matrix(   # 1 or klen x klen
                 key_len, self.max_relative_positions, self.use_neg_dist,
                 cache=True if cache is not None else False)
+            logger.info(relative_positions_matrix)
 
             #print('generated rel pos matrix size', relative_positions_matrix.size())
             #print('generated rel pos matrix')
@@ -228,7 +229,8 @@ class MultiHeadAttention(nn.Module):
             logger.info(weights[:, :, :, :weights.shape[-2]].size())
             logger.info(relations_v.size())
 
-            res2 = relative_matmul(weights[:, :, :, :weights.shape[-2]],
+                                                   #: weights.shape[-2]]
+            res2 = relative_matmul(weights[:, :, :, :],
                                                 relations_v,
                                                 False)
 
