@@ -1354,7 +1354,8 @@ class CharSPEnvironment(object):
         )
 
     def create_test_iterator(self, data_type, task, params, data_path, 
-                             rel_matrices_path=None, rel_vocab_path=None, tree_rel_vocab_size=0):
+                             rel_matrices_path=None, rel_vocab_path=None, tree_rel_vocab_size=0,
+                             root_paths_path=None, max_path_width=-1, max_path_depth=-1):
         """
         Create a dataset for this environment.
         """
@@ -1370,7 +1371,10 @@ class CharSPEnvironment(object):
             path=(None if data_path is None else data_path[task][1 if data_type == 'valid' else 2]),
             rel_matrices_path=(None if rel_matrices_path is None else rel_matrices_path[task][1 if data_type == 'valid' else 2]),
             rel_vocab_path=rel_vocab_path,
-            tree_rel_vocab_size=tree_rel_vocab_size
+            tree_rel_vocab_size=tree_rel_vocab_size,
+            root_paths_path=(None if root_paths_path is None else root_paths_path[task][0]),
+            max_path_width=max_path_width,
+            max_path_depth=max_path_depth
         )
         collate_fn = dataset.return_collate()
         return DataLoader(

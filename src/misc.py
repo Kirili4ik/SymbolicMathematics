@@ -45,7 +45,6 @@ class TreePositionalEncodings(torch.nn.Module):
 
     def init_weights(self):
         self.p.data.uniform_(0.7, 0.999)
-        print(self.p)
 
     def build_weights(self):
         d_tree_param = self.d_tree_param
@@ -79,9 +78,7 @@ class TreePositionalEncodings(torch.nn.Module):
             returns: Tensor [bs, seq_len, max_w * max_d * n_features] = [bs, seq_len, emb_size]
         """
         tree_weights = self.build_weights()
-        print('tree_weights are created of size', tree_weights.size())
         positions = self.treeify_positions(positions, tree_weights)
-        print('result is positions', positions.size(), positions)
         return positions
 
 

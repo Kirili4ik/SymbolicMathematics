@@ -148,19 +148,27 @@ class Evaluator(object):
             logger.info(f"Writing evaluation results in {eval_path} ...")
 
         # iterator
-        iterator = self.env.create_test_iterator(data_type, task, params=params, data_path=self.trainer.data_path,
-                                                 rel_matrices_path=self.trainer.rel_matrices_path,
-                                                 rel_vocab_path=self.trainer.params.rel_vocab_path,
-                                                 tree_rel_vocab_size=self.trainer.params.tree_rel_vocab_size)
+        iterator = self.env.create_test_iterator(data_type, task, params, self.trainer.data_path,
+                                                 self.trainer.rel_matrices_path,
+                                                 self.trainer.params.rel_vocab_path,
+                                                 self.trainer.params.tree_rel_vocab_size,
+                                                 self.trainer.root_paths_path,
+                                                 self.trainer.params.max_path_width,
+                                                 self.trainer.params.max_path_depth)
         eval_size = len(iterator.dataset)
 
         for elem in iterator:
             if self.trainer.rel_matrices_path is not None:
                 (x1, len1), (x2, len2), (rel_matrices_batch, rel_lens), nb_ops = elem
-            else:
-                (x1, len1), (x2, len2), nb_ops = elem
+            elif self.trainer.root_paths_path is not None:
+                (x1, len1), (x2, len2), root_path_batch, nb_ops = self.get_batch(task)
                 rel_matrices_batch = None
                 rel_lens = None
+            else:
+                (x1, len1), (x2, len2), nb_ops = self.get_batch(task)
+                rel_matrices_batch = None
+                rel_lens = None
+                root_path_batch = None
             # print status
             if n_total.sum().item() % 100 < params.batch_size:
                 logger.info(f"{n_total.sum().item()}/{eval_size}")
@@ -172,10 +180,10 @@ class Evaluator(object):
             assert len(y) == (len2 - 1).sum().item()
 
             # cuda
-            x1, len1, x2, len2, y, rel_matrices_batch, rel_lens = to_cuda(x1, len1, x2, len2, y, rel_matrices_batch,
-                                                                          rel_lens)
+            x1, len1, x2, len2, y, rel_matrices_batch, rel_lens, root_path_batch = to_cuda(x1, len1, x2, len2, y,
+                                                                                           rel_matrices_batch, rel_lens, root_path_batch)
             # forward / loss
-            encoded = encoder('fwd', x=x1, lengths=len1, causal=False, rel_matrix=rel_matrices_batch, rel_lens=rel_lens)
+            encoded = encoder('fwd', x=x1, lengths=len1, causal=False, rel_matrix=rel_matrices_batch, rel_lens=rel_lens, root_paths=root_path_batch)
             decoded = decoder('fwd', x=x2, lengths=len2, causal=True, src_enc=encoded.transpose(0, 1), src_len=len1)
             word_scores, loss = decoder('predict', tensor=decoded, pred_mask=pred_mask, y=y, get_scores=True)
 
