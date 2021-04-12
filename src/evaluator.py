@@ -161,11 +161,11 @@ class Evaluator(object):
             if self.trainer.rel_matrices_path is not None:
                 (x1, len1), (x2, len2), (rel_matrices_batch, rel_lens), nb_ops = elem
             elif self.trainer.root_paths_path is not None:
-                (x1, len1), (x2, len2), root_path_batch, nb_ops = self.get_batch(task)
+                (x1, len1), (x2, len2), root_path_batch, nb_ops = elem
                 rel_matrices_batch = None
                 rel_lens = None
             else:
-                (x1, len1), (x2, len2), nb_ops = self.get_batch(task)
+                (x1, len1), (x2, len2), nb_ops = elem
                 rel_matrices_batch = None
                 rel_lens = None
                 root_path_batch = None
