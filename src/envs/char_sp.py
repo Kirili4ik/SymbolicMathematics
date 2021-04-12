@@ -1529,12 +1529,18 @@ class EnvDataset(Dataset):
         nb_ops = [sum(int(word in self.env.OPERATORS) for word in seq) for seq in x]
         x = [torch.LongTensor([self.env.word2id[w] for w in seq if w in self.env.word2id]) for seq in x]
         y = [torch.LongTensor([self.env.word2id[w] for w in seq if w in self.env.word2id]) for seq in y]
-
-        tree_positions_batch = torch.stack([generate_positions(root_paths, self.max_path_width, self.max_path_depth)
-                                            for root_paths in rps])
-
         x, x_len = self.env.batch_sequences(x)
         y, y_len = self.env.batch_sequences(y)
+
+        tree_positions_list = [generate_positions(root_paths, self.max_path_width, self.max_path_depth)
+                               for root_paths in rps]
+
+        bs = len(tree_positions_list)
+        max_wd = tree_positions_list[0].size(1)
+        tree_positions_batch = torch.zeros(bs, x_len.max().item(), max_wd, dtype=torch.float)
+        for i in range(len(tree_positions_list)):
+            tree_positions_batch[i, :tree_positions_list[i].size(0), :].copy_(tree_positions_list[i])
+
         return (x, x_len), (y, y_len), tree_positions_batch, torch.LongTensor(nb_ops)
 
     def init_rng(self):
