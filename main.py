@@ -88,7 +88,12 @@ def get_parser():
                         help='Type of tree relative attention to use. Requires reload_rel_matrices & tree_rel_vocab_size')
     parser.add_argument('--tree_rel_vocab_size', type=int, default=0,
                         help='maximum number of relations in tree')
-
+    parser.add_argument("--use_tree_pos_enc", type=bool, default=False,
+                        help="use tree positional encodings")
+    parser.add_argument('--max_path_width', type=int, default=4,
+                        help='maximum width of root path')
+    parser.add_argument('--max_path_depth', type=int, default=16,
+                        help='maximum depth of root path')
 
     # training parameters
     parser.add_argument("--env_base_seed", type=int, default=0,
@@ -129,6 +134,8 @@ def get_parser():
                        help="Preprocessed relative matrices files (task1,train_path1,valid_path1,test_path1;task2,train_path2,valid_path2,test_path2)")
     parser.add_argument('--rel_vocab_path', type=str, default="",
                         help="File with vocabulary for tree relative attention")
+    parser.add_argument('--reload_root_paths', type=str, default="",
+                        help="Preprocessed root paths in files (task1,train_path1,valid_path1,test_path1;task2,train_path2,valid_path2,test_path2)")
 
     # environment parameters
     parser.add_argument("--env_name", type=str, default="char_sp",

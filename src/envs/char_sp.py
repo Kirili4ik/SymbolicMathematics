@@ -25,7 +25,7 @@ from sympy.integrals.risch import NonElementaryIntegral
 from sympy.calculus.util import AccumBounds
 
 import json
-from ..misc import FileReaders
+from ..misc import FileReaders, generate_positions
 
 from ..utils import bool_flag
 from ..utils import timeout, TimeoutError
@@ -1322,7 +1322,8 @@ class CharSPEnvironment(object):
                             help="Clean prefix expressions (f x -> Y, derivative f x x -> Y')")
 
     def create_train_iterator(self, task, params, data_path, 
-                              rel_matrices_path=None, rel_vocab_path=None, tree_rel_vocab_size=0):
+                              rel_matrices_path=None, rel_vocab_path=None, tree_rel_vocab_size=0,
+                              root_paths_path=None, max_path_width=-1, max_path_depth=-1):
         """
         Create a dataset for this environment.
         """
@@ -1337,7 +1338,10 @@ class CharSPEnvironment(object):
             path=(None if data_path is None else data_path[task][0]),
             rel_matrices_path=(None if rel_matrices_path is None else rel_matrices_path[task][0]),
             rel_vocab_path=rel_vocab_path,
-            tree_rel_vocab_size=tree_rel_vocab_size
+            tree_rel_vocab_size=tree_rel_vocab_size,
+            root_paths_path=(None if root_paths_path is None else root_paths_path[task][0]),
+            max_path_width=max_path_width,
+            max_path_depth=max_path_depth
         )
         collate_fn = dataset.return_collate()
         return DataLoader(
@@ -1381,7 +1385,9 @@ class CharSPEnvironment(object):
 
 class EnvDataset(Dataset):
 
-    def __init__(self, env, task, train, rng, params, path, rel_matrices_path=None, rel_vocab_path=None, tree_rel_vocab_size=0):
+    def __init__(self, env, task, train, rng, params, path,
+                 rel_matrices_path=None, rel_vocab_path=None, tree_rel_vocab_size=0,
+                 root_paths_path=None, max_path_width=-1, max_path_depth=-1):
         super(EnvDataset).__init__()
         self.env = env
         self.rng = rng
@@ -1393,14 +1399,23 @@ class EnvDataset(Dataset):
         self.rel_matrices_path = rel_matrices_path
         self.rel_vocab_path = rel_vocab_path
         self.tree_rel_vocab_size = tree_rel_vocab_size
+        self.root_paths_path = root_paths_path
+        self.max_path_width = max_path_width
+        self.max_path_depth = max_path_depth
         self.global_rank = params.global_rank
         self.count = 0
         assert (train is True) == (rng is None)
         assert task in CharSPEnvironment.TRAINING_TASKS
 
-        self.file_readers = FileReaders(self.rel_matrices_path, params.num_workers) if self.rel_matrices_path is not None else None
-        logger.info('rel mat path is')
-        logger.info(self.rel_matrices_path)
+        if self.rel_matrices_path is not None:
+            self.file_readers = FileReaders(self.rel_matrices_path, params.num_workers)
+            logger.info('rel mat path is')
+            logger.info(self.rel_matrices_path)
+
+        if self.root_paths_path is not None:
+            self.file_readers = FileReaders(self.root_paths_path, params.num_workers)
+            logger.info('root paths path is')
+            logger.info(self.root_paths_path)
 
         # batching
         self.num_workers = params.num_workers
@@ -1447,10 +1462,12 @@ class EnvDataset(Dataset):
 
     def return_collate(self):
         # logger.info('im in return collate')
-        if self.rel_matrices_path is None:
-            return self.collate_fn
-        else:
+        if self.rel_matrices_path is not None:
             return self.collate_fn_relmat
+        elif self.root_paths_path is not None:
+            return self.collate_fn_root_paths
+        else:
+            return self.collate_fn
 
     def collate_fn(self, elements):
         """
@@ -1504,6 +1521,21 @@ class EnvDataset(Dataset):
         x, x_len = self.env.batch_sequences(x)
         y, y_len = self.env.batch_sequences(y)
         return (x, x_len), (y, y_len), (rel_matrices_batch, lengths), torch.LongTensor(nb_ops)
+
+    def collate_fn_root_paths(self, elements):
+
+        # logger.info('im in collate fn root paths')
+        x, y, rps = zip(*elements)
+        nb_ops = [sum(int(word in self.env.OPERATORS) for word in seq) for seq in x]
+        x = [torch.LongTensor([self.env.word2id[w] for w in seq if w in self.env.word2id]) for seq in x]
+        y = [torch.LongTensor([self.env.word2id[w] for w in seq if w in self.env.word2id]) for seq in y]
+
+        tree_positions_batch = torch.stack([generate_positions(root_paths, self.max_path_width, self.max_path_depth)
+                                            for root_paths in rps])
+
+        x, x_len = self.env.batch_sequences(x)
+        y, y_len = self.env.batch_sequences(y)
+        return (x, x_len), (y, y_len), tree_positions_batch, torch.LongTensor(nb_ops)
 
     def init_rng(self):
         """
@@ -1569,6 +1601,19 @@ class EnvDataset(Dataset):
             with self.file_readers.global_lock:
                 self.file_readers.locks[num_fd] = False
             return x, y, rel_matrix
+        elif self.root_paths_path is not None:
+            # logger.info('i m reading')
+            file_reader, num_fd = self.file_readers.get_fd()
+            # logger.info(file_reader)
+            line = file_reader.get_line(index).strip()
+            # logger.info('read line')
+            # logger.info(line)
+            # new_line = json.loads(line)
+            # logger.info('did json')
+            rps = [[int(rp_elem) for rp_elem in list(rp)] if rp != "root" else [] for rp in line.split()]
+            with self.file_readers.global_lock:
+                self.file_readers.locks[num_fd] = False
+            return x, y, rps
         return x, y
 
     def generate_sample(self):

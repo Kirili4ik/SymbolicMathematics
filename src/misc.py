@@ -1,6 +1,91 @@
 import torch
 import multiprocessing as mp
 
+### tree pos enc ###
+
+def generate_positions(root_paths, max_width, max_depth):
+    """
+    root_paths: List([ch_ids]) of size seq_len, ch_ids \in [0, 1, ..., max_width)
+    returns: Tensor [len(root_paths), max_width * max_depth]
+    """
+    for i, path in enumerate(root_paths):
+        # stack-like traverse
+        if len(root_paths[i]) > max_depth:
+            root_paths[i] = root_paths[i][-max_depth:]
+        # pad
+        root_paths[i] = root_paths[i][::-1] + [max_width] * (max_depth - len(root_paths[i]))
+
+    # (seq_len, max_d)
+    root_path_tensor = torch.LongTensor(root_paths)
+
+    # (max_w + 1, max_w); 1 more is for pad = torch.zeros()
+    onehots = torch.zeros((max_width + 1, max_width))
+    for i in range(max_width):
+        onehots[i, i] = 1.0
+
+    # -> (seq_len*max_d, max_w)
+    embeddings = torch.index_select(onehots, dim=0, index=root_path_tensor.view(-1))
+    # -> (seq_len, max_d, max_w)
+    embeddings = embeddings.view(root_path_tensor.shape + (embeddings.shape[-1],))
+    # -> (seq_len, max_d*max_w)
+    embeddings = embeddings.view((root_path_tensor.shape[0], -1))
+    return embeddings
+
+
+class TreePositionalEncodings(torch.nn.Module):
+    def __init__(self, emb_size, width, depth):
+        super(TreePositionalEncodings, self).__init__()
+        # self.dropout = nn.Dropout(p=dropout)
+        self.depth = depth
+        self.width = width
+        self.d_tree_param = emb_size // depth // width
+        self.d_pos = emb_size
+        self.p = torch.nn.Parameter(torch.ones(self.d_tree_param, dtype=torch.float32), requires_grad=True)
+        self.init_weights()
+
+    def init_weights(self):
+        self.p.data.uniform_(0.7, 0.999)
+        print(self.p)
+
+    def build_weights(self):
+        d_tree_param = self.d_tree_param
+        tree_params = torch.tanh(self.p)
+
+        # reshape p -> (max_d, max_w, d_tree_param)
+        tiled_tree_params = tree_params.reshape((1, 1, -1)).repeat(self.depth, self.width, 1)
+
+        # arange max_d --repeat>> (max_d, max_w, d_tree_param)
+        tiled_depths = torch.arange(self.depth, dtype=torch.float32, device=self.p.device) \
+            .reshape(-1, 1, 1).repeat(1, self.width, d_tree_param)
+        # (d_tree_param)
+        tree_norm = torch.sqrt((1 - tree_params ** 2) * self.d_pos / 2)
+
+        # params ** depths * norm_coefs --reshape>> (max_d*max_w, d_tree_param)
+        tree_weights = (torch.pow(tiled_tree_params, tiled_depths) * tree_norm) \
+            .reshape(self.depth * self.width, d_tree_param)
+        return tree_weights
+
+    def treeify_positions(self, positions, tree_weights):
+        # (bs, seq_len, max_w*max_d) * (max_d*max_w, d_tree_param) -> (bs, seq_len, max_w*max_d, d_tree_param)
+        treeified = positions.unsqueeze(-1) * tree_weights
+
+        # (bs, seq_len) + (emb_size,)  ->  (bs, seq_len, emb_size)
+        shape = treeified.shape[:-2] + (self.d_pos,)
+        return treeified.reshape(shape)
+
+    def forward(self, positions):
+        """
+            positions: Tensor [bs, seq_len, max_w * max_d]
+            returns: Tensor [bs, seq_len, max_w * max_d * n_features] = [bs, seq_len, emb_size]
+        """
+        tree_weights = self.build_weights()
+        print('tree_weights are created of size', tree_weights.size())
+        positions = self.treeify_positions(positions, tree_weights)
+        print('result is positions', positions.size(), positions)
+        return positions
+
+
+### tree rel att ###
 
 def generate_relative_positions_matrix(length,
                                        max_relative_positions,
@@ -57,6 +142,7 @@ def get_rel_mask(lengths, max_len):
         rel_matrix_mask[i, :l, :l] = 1
     return rel_matrix_mask
 
+### parallel file readers ###
 
 class FileReader:
     def __init__(self, filename):

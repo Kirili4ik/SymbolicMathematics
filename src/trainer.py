@@ -134,7 +134,7 @@ class Trainer(object):
         else:
             self.data_path = None
 
-        # reload tree relative attention matrices
+        # reload tree relative attention matrices for tree rel attention
         if params.reload_rel_matrices != '':
             assert params.export_data is False
             s = [x.split(',') for x in params.reload_rel_matrices.split(';') if len(x) > 0]
@@ -147,13 +147,28 @@ class Trainer(object):
         else:
             self.rel_matrices_path = None
 
+        # reload root paths for tree pos encodings
+        if params.reload_root_paths != '':
+            assert params.export_data is False
+            s = [x.split(',') for x in params.reload_root_paths.split(';') if len(x) > 0]
+            assert len(s) >= 1 and all(len(x) == 4 for x in s) and len(s) == len(set([x[0] for x in s]))
+            self.root_paths_path = {task: (train_path, valid_path, test_path) for
+                                      task, train_path, valid_path, test_path
+                                      in s}
+            assert all(all(os.path.isfile(path) for path in paths) for paths in self.root_paths_path.values())
+            for task in self.env.TRAINING_TASKS:
+                assert (task in self.root_paths_path) == (task in params.tasks)
+        else:
+            self.root_paths_path = None
+
         # create data loaders
         if not params.eval_only:
             if params.env_base_seed < 0:
                 params.env_base_seed = np.random.randint(1_000_000_000)
             self.dataloader = {
                 task: iter(self.env.create_train_iterator(task, params, self.data_path,
-                                                          self.rel_matrices_path, self.params.rel_vocab_path, params.tree_rel_vocab_size))
+                                                          self.rel_matrices_path, self.params.rel_vocab_path, params.tree_rel_vocab_size,
+                                                          self.root_paths_path, self.params.max_path_width, self.params.max_path_depth))
                 for task in params.tasks
             }
 
@@ -466,10 +481,17 @@ class Trainer(object):
         if self.rel_matrices_path is not None:
                                     # (SRC_LEN, SRC_LEN, BS)
             (x1, len1), (x2, len2), (rel_matrices_batch, rel_lens), _ = self.get_batch(task)
+            root_path_batch = None
+        elif self.root_paths_path is not None:
+                                    # (BS, SRC_LEN, max_path_width * max_path_depth)
+            (x1, len1), (x2, len2), root_path_batch, _ = self.get_batch(task)
+            rel_matrices_batch = None
+            rel_lens = None
         else:
             (x1, len1), (x2, len2), _ = self.get_batch(task)
             rel_matrices_batch = None
             rel_lens = None
+            root_path_batch = None
 
         # target words to predict
         alen = torch.arange(len2.max(), dtype=torch.long, device=len2.device)
@@ -478,10 +500,10 @@ class Trainer(object):
         assert len(y) == (len2 - 1).sum().item()
 
         # cuda
-        x1, len1, x2, len2, y, rel_matrices_batch, rel_lens = to_cuda(x1, len1, x2, len2, y, rel_matrices_batch, rel_lens)
+        x1, len1, x2, len2, y, rel_matrices_batch, rel_lens, root_path_batch = to_cuda(x1, len1, x2, len2, y, rel_matrices_batch, rel_lens, root_path_batch)
 
         # forward / loss
-        encoded = encoder('fwd', x=x1, lengths=len1, causal=False, rel_matrix=rel_matrices_batch, rel_lens=rel_lens)
+        encoded = encoder('fwd', x=x1, lengths=len1, causal=False, rel_matrix=rel_matrices_batch, rel_lens=rel_lens, root_paths=root_path_batch)
         decoded = decoder('fwd', x=x2, lengths=len2, causal=True, src_enc=encoded.transpose(0, 1), src_len=len1)
         _, loss = decoder('predict', tensor=decoded, pred_mask=pred_mask, y=y, get_scores=False)
         self.stats[task].append(loss.item())

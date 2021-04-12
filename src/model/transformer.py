@@ -13,7 +13,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from src.misc import generate_relative_positions_matrix, relative_matmul, get_rel_mask
+from src.misc import generate_relative_positions_matrix, relative_matmul, get_rel_mask, TreePositionalEncodings
 
 N_MAX_POSITIONS = 4096  # maximum input sequence length
 
@@ -309,10 +309,14 @@ class TransformerModel(nn.Module):
         assert self.dim % self.n_heads == 0, 'transformer dim must be a multiple of n_heads'
         self.max_relative_pos = params.max_relative_pos
         self.use_neg_dist = params.use_neg_dist
+        self.max_path_width = params.max_path_width
+        self.max_path_depth = params.max_path_depth
         if is_encoder:
             self.use_tree_rel_att = None if params.use_tree_rel_att == "" else params.use_tree_rel_att
+            self.use_tree_pos_enc = params.use_tree_pos_enc
         else:
             self.use_tree_rel_att = None
+            self.use_tree_pos_enc = False
         self.tree_rel_vocab_size = params.tree_rel_vocab_size
 
         # embeddings
@@ -322,6 +326,10 @@ class TransformerModel(nn.Module):
             self.position_embeddings = Embedding(N_MAX_POSITIONS, self.dim)
             if params.sinusoidal_embeddings:
                 create_sinusoidal_embeddings(N_MAX_POSITIONS, self.dim, out=self.position_embeddings.weight)
+        if self.is_encoder and self.use_tree_pos_enc:
+            self.tree_pos_encodings = TreePositionalEncodings(self.enc_input_size,
+                                                              self.max_path_width,
+                                                              self.max_path_depth)
         self.embeddings = Embedding(self.n_words, self.dim, padding_idx=self.pad_index)
         self.layer_norm_emb = nn.LayerNorm(self.dim, eps=1e-12)
 
@@ -364,7 +372,7 @@ class TransformerModel(nn.Module):
             raise Exception("Unknown mode: %s" % mode)
 
     def fwd(self, x, lengths, causal, src_enc=None, src_len=None, positions=None, cache=None, previous_state=None,
-            rel_matrix=None, rel_lens=None):
+            rel_matrix=None, rel_lens=None, root_paths=None):
         """
         Inputs:
             `x` LongTensor(slen, bs), containing word indices
@@ -410,6 +418,8 @@ class TransformerModel(nn.Module):
             positions = positions[:, -_slen:]
             mask = mask[:, -_slen:]
             attn_mask = attn_mask[:, -_slen:]
+            rel_mask = rel_mask[:, -_slen:]
+            rel_matrix = rel_matrix[:, -_slen]
 
         # all layer outputs
         if TransformerModel.STORE_OUTPUTS and not self.training:
@@ -420,6 +430,9 @@ class TransformerModel(nn.Module):
             tensor = self.embeddings(x)
             if (self.is_encoder and self.use_pos_embeddings_E) or (self.is_decoder and self.use_pos_embeddings_D):
                 tensor = tensor + self.position_embeddings(positions).expand_as(tensor)
+            if self.is_encoder and self.use_tree_pos_enc:
+                tree_pos_enc = self.tree_pos_encodings(root_paths)  # (bs, seq_len, emb_dim)
+                tensor = tensor + tree_pos_enc
             tensor = self.layer_norm_emb(tensor)
             tensor = F.dropout(tensor, p=self.dropout, training=self.training)
             tensor *= mask.unsqueeze(-1).to(tensor.dtype)
