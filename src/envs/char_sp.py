@@ -1372,7 +1372,7 @@ class CharSPEnvironment(object):
             rel_matrices_path=(None if rel_matrices_path is None else rel_matrices_path[task][1 if data_type == 'valid' else 2]),
             rel_vocab_path=rel_vocab_path,
             tree_rel_vocab_size=tree_rel_vocab_size,
-            root_paths_path=(None if root_paths_path is None else root_paths_path[task][0]),
+            root_paths_path=(None if root_paths_path is None else root_paths_path[task][1 if data_type == 'valid' else 2]),
             max_path_width=max_path_width,
             max_path_depth=max_path_depth
         )
