@@ -2,7 +2,7 @@
 #SBACTH --error=../logs/tree_pos_enc_0303-%j.err   # Файл с ошибками
 #SBATCH --output=../logs/tree_pos_enc_0303-%j.log  # Файл для вывода результатов
 #SBATCH --time=4-23:00:00            # Максимальное время выполнения
-#SBATCH --gpus=1                   # Требуемое кол-во GPU
+#SBATCH --gpus=0                   # Требуемое кол-во GPU
 #SBATCH --cpus-per-task=2          # Требуемое кол-во CPU
 
 source activate sym-math

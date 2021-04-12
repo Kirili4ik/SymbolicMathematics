@@ -327,7 +327,7 @@ class TransformerModel(nn.Module):
             if params.sinusoidal_embeddings:
                 create_sinusoidal_embeddings(N_MAX_POSITIONS, self.dim, out=self.position_embeddings.weight)
         if self.is_encoder and self.use_tree_pos_enc:
-            self.tree_pos_encodings = TreePositionalEncodings(self.enc_input_size,
+            self.tree_pos_encodings = TreePositionalEncodings(self.dim,
                                                               self.max_path_width,
                                                               self.max_path_depth)
         self.embeddings = Embedding(self.n_words, self.dim, padding_idx=self.pad_index)
