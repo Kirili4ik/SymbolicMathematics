@@ -311,12 +311,12 @@ class TransformerModel(nn.Module):
         self.use_neg_dist = params.use_neg_dist
         self.max_path_width = params.max_path_width
         self.max_path_depth = params.max_path_depth
+        self.use_tree_pos_enc_E = params.use_tree_pos_enc
+        self.use_tree_pos_enc_D = params.use_tree_pos_enc_D
         if is_encoder:
             self.use_tree_rel_att = None if params.use_tree_rel_att == "" else params.use_tree_rel_att
-            self.use_tree_pos_enc = params.use_tree_pos_enc
         else:
             self.use_tree_rel_att = None
-            self.use_tree_pos_enc = False
         self.tree_rel_vocab_size = params.tree_rel_vocab_size
 
         # embeddings
@@ -326,7 +326,7 @@ class TransformerModel(nn.Module):
             self.position_embeddings = Embedding(N_MAX_POSITIONS, self.dim)
             if params.sinusoidal_embeddings:
                 create_sinusoidal_embeddings(N_MAX_POSITIONS, self.dim, out=self.position_embeddings.weight)
-        if self.is_encoder and self.use_tree_pos_enc:
+        if (self.is_encoder and self.use_tree_pos_enc_E) or (self.is_decoder and self.use_tree_pos_enc_D):
             self.tree_pos_encodings = TreePositionalEncodings(self.dim,
                                                               self.max_path_width,
                                                               self.max_path_depth)
@@ -430,7 +430,7 @@ class TransformerModel(nn.Module):
             tensor = self.embeddings(x)
             if (self.is_encoder and self.use_pos_embeddings_E) or (self.is_decoder and self.use_pos_embeddings_D):
                 tensor = tensor + self.position_embeddings(positions).expand_as(tensor)
-            if self.is_encoder and self.use_tree_pos_enc:
+            if (self.is_encoder and self.use_tree_pos_enc_E) or (self.is_decoder and self.use_tree_pos_enc_D):
                 tree_pos_enc = self.tree_pos_encodings(root_paths)  # (bs, seq_len, emb_dim)
                 tensor = tensor + tree_pos_enc
             tensor = self.layer_norm_emb(tensor)

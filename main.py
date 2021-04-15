@@ -88,12 +88,14 @@ def get_parser():
                         help='Type of tree relative attention to use. Requires reload_rel_matrices & tree_rel_vocab_size')
     parser.add_argument('--tree_rel_vocab_size', type=int, default=0,
                         help='maximum number of relations in tree')
-    parser.add_argument("--use_tree_pos_enc", type=bool, default=False,
-                        help="use tree positional encodings")
+    parser.add_argument("--use_tree_pos_enc_E", type=bool, default=False,
+                        help="use tree positional encodings in ENCODER")
+    parser.add_argument("--use_tree_pos_enc_D", type=bool, default=False,
+                        help="use tree positional encodings in DECODER")
     parser.add_argument('--max_path_width', type=int, default=4,
-                        help='maximum width of root path')
+                        help='maximum width of root path for tree-pos-enc')
     parser.add_argument('--max_path_depth', type=int, default=16,
-                        help='maximum depth of root path')
+                        help='maximum depth of root path for tree-pos-enc')
 
     # training parameters
     parser.add_argument("--env_base_seed", type=int, default=0,

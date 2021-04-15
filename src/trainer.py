@@ -481,17 +481,17 @@ class Trainer(object):
         if self.rel_matrices_path is not None:
                                     # (SRC_LEN, SRC_LEN, BS)
             (x1, len1), (x2, len2), (rel_matrices_batch, rel_lens), _ = self.get_batch(task)
-            root_path_batch = None
+            root_path_batch_q, root_path_batch_a = None, None
         elif self.root_paths_path is not None:
                                     # (BS, SRC_LEN, max_path_width * max_path_depth)
-            (x1, len1), (x2, len2), root_path_batch, _ = self.get_batch(task)
+            (x1, len1), (x2, len2), (root_path_batch_q, root_path_batch_a), _ = self.get_batch(task)
             rel_matrices_batch = None
             rel_lens = None
         else:
             (x1, len1), (x2, len2), _ = self.get_batch(task)
             rel_matrices_batch = None
             rel_lens = None
-            root_path_batch = None
+            root_path_batch_q, root_path_batch_a = None, None
 
         # target words to predict
         alen = torch.arange(len2.max(), dtype=torch.long, device=len2.device)
@@ -500,11 +500,15 @@ class Trainer(object):
         assert len(y) == (len2 - 1).sum().item()
 
         # cuda
-        x1, len1, x2, len2, y, rel_matrices_batch, rel_lens, root_path_batch = to_cuda(x1, len1, x2, len2, y, rel_matrices_batch, rel_lens, root_path_batch)
+        x1, len1, x2, len2, y, \
+        rel_matrices_batch, rel_lens, \
+        root_path_batch_q, root_path_batch_a = to_cuda(x1, len1, x2, len2, y,
+                                                       rel_matrices_batch, rel_lens,
+                                                       root_path_batch_q, root_path_batch_a)
 
         # forward / loss
-        encoded = encoder('fwd', x=x1, lengths=len1, causal=False, rel_matrix=rel_matrices_batch, rel_lens=rel_lens, root_paths=root_path_batch)
-        decoded = decoder('fwd', x=x2, lengths=len2, causal=True, src_enc=encoded.transpose(0, 1), src_len=len1)
+        encoded = encoder('fwd', x=x1, lengths=len1, causal=False, rel_matrix=rel_matrices_batch, rel_lens=rel_lens, root_paths=root_path_batch_q)
+        decoded = decoder('fwd', x=x2, lengths=len2, causal=True, src_enc=encoded.transpose(0, 1), src_len=len1, root_paths=root_path_batch_a)
         _, loss = decoder('predict', tensor=decoded, pred_mask=pred_mask, y=y, get_scores=False)
         self.stats[task].append(loss.item())
 

@@ -1529,23 +1529,31 @@ class EnvDataset(Dataset):
     def collate_fn_root_paths(self, elements):
 
         # logger.info('im in collate fn root paths')
-        x, y, rps = zip(*elements)
+        x, y, rps_q, rps_a = zip(*elements)
         nb_ops = [sum(int(word in self.env.OPERATORS) for word in seq) for seq in x]
         x = [torch.LongTensor([self.env.word2id[w] for w in seq if w in self.env.word2id]) for seq in x]
         y = [torch.LongTensor([self.env.word2id[w] for w in seq if w in self.env.word2id]) for seq in y]
         x, x_len = self.env.batch_sequences(x)
         y, y_len = self.env.batch_sequences(y)
 
-        tree_positions_list = [generate_positions(root_paths, self.max_path_width, self.max_path_depth)
-                               for root_paths in rps]
 
-        bs = len(tree_positions_list)
-        max_wd = tree_positions_list[0].size(1)
-        tree_positions_batch = torch.zeros(bs, x_len.max().item(), max_wd, dtype=torch.float)
-        for i in range(len(tree_positions_list)):
-            tree_positions_batch[i, :tree_positions_list[i].size(0), :].copy_(tree_positions_list[i])
+        tree_positions_list_q = [generate_positions(root_paths, self.max_path_width, self.max_path_depth)
+                               for root_paths in rps_q]
+        bs = len(tree_positions_list_q)
+        max_wd = tree_positions_list_q[0].size(1)
+        tree_positions_batch_q = torch.zeros(bs, x_len.max().item(), max_wd, dtype=torch.float)
+        for i in range(len(tree_positions_list_q)):
+            tree_positions_batch_q[i, :tree_positions_list_q[i].size(0), :].copy_(tree_positions_list_q[i])
 
-        return (x, x_len), (y, y_len), tree_positions_batch, torch.LongTensor(nb_ops)
+        tree_positions_list_a = [generate_positions(root_paths, self.max_path_width, self.max_path_depth)
+                               for root_paths in rps_a]
+        bs = len(tree_positions_list_a)
+        max_wd = tree_positions_list_a[0].size(1)
+        tree_positions_batch_a = torch.zeros(bs, x_len.max().item(), max_wd, dtype=torch.float)
+        for i in range(len(tree_positions_list_a)):
+            tree_positions_batch_a[i, :tree_positions_list_a[i].size(0), :].copy_(tree_positions_list_a[i])
+
+        return (x, x_len), (y, y_len), (tree_positions_batch_q, tree_positions_batch_a), torch.LongTensor(nb_ops)
 
     def init_rng(self):
         """
@@ -1616,14 +1624,16 @@ class EnvDataset(Dataset):
             file_reader, num_fd = self.file_readers.get_fd()
             # logger.info(file_reader)
             line = file_reader.get_line(index).strip()
+            q, a = line.split('\t')
             # logger.info('read line')
             # logger.info(line)
             # new_line = json.loads(line)
             # logger.info('did json')
-            rps = [[int(rp_elem) for rp_elem in list(rp)] if rp != "root" else [] for rp in line.split()]
+            rps_q = [[int(rp_elem) for rp_elem in list(rp)] if rp != "root" else [] for rp in q.split()]
+            rps_a = [[int(rp_elem) for rp_elem in list(rp)] if rp != "root" else [] for rp in a.split()]
             with self.file_readers.global_lock:
                 self.file_readers.locks[num_fd] = False
-            return x, y, rps
+            return x, y, rps_q, rps_a
         return x, y
 
     def generate_sample(self):
