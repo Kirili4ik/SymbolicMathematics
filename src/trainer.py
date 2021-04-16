@@ -501,10 +501,10 @@ class Trainer(object):
 
         # cuda
         x1, len1, x2, len2, y, \
-        rel_matrices_batch, rel_lens, \
-        root_path_batch_q, root_path_batch_a = to_cuda(x1, len1, x2, len2, y,
-                                                       rel_matrices_batch, rel_lens,
-                                                       root_path_batch_q, root_path_batch_a)
+            rel_matrices_batch, rel_lens, \
+            root_path_batch_q, root_path_batch_a = to_cuda(x1, len1, x2, len2, y,
+                                                           rel_matrices_batch, rel_lens,
+                                                           root_path_batch_q, root_path_batch_a)
 
         # forward / loss
         encoded = encoder('fwd', x=x1, lengths=len1, causal=False, rel_matrix=rel_matrices_batch, rel_lens=rel_lens, root_paths=root_path_batch_q)
