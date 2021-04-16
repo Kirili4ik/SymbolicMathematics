@@ -273,10 +273,9 @@ class Evaluator(object):
         n_total = torch.zeros(1000, dtype=torch.long)
 
         # iterator
-        iterator = self.env.create_test_iterator(data_type, task, params=params, data_path=self.trainer.data_path,
-                                                 rel_matrices_path=self.trainer.rel_matrices_path,
-                                                 rel_vocab_path=self.trainer.params.rel_vocab_path,
-                                                 tree_rel_vocab_size=self.trainer.params.tree_rel_vocab_size)
+        iterator = self.env.create_test_iterator(data_type, task, params, self.trainer.data_path,
+                                                 self.trainer.rel_matrices_path, self.trainer.params.rel_vocab_path,self.trainer.params.tree_rel_vocab_size,
+                                                 self.trainer.root_paths_path, self.trainer.params.max_path_width, self.trainer.params.max_path_depth)
         eval_size = len(iterator.dataset)
 
         for elem in iterator:
