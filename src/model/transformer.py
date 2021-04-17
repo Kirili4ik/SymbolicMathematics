@@ -418,8 +418,8 @@ class TransformerModel(nn.Module):
             positions = positions[:, -_slen:]
             mask = mask[:, -_slen:]
             attn_mask = attn_mask[:, -_slen:]
-            rel_mask = rel_mask[:, -_slen:]
-            rel_matrix = rel_matrix[:, -_slen]
+            rel_mask = rel_mask[:, -_slen:] if rel_mask is not None else None
+            rel_matrix = rel_matrix[:, -_slen] if rel_matrix is not None else None
 
         # all layer outputs
         if TransformerModel.STORE_OUTPUTS and not self.training:
