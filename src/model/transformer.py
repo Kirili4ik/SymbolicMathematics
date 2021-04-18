@@ -379,7 +379,7 @@ class TransformerModel(nn.Module):
         self.use_neg_dist = params.use_neg_dist
         self.max_path_width = params.max_path_width
         self.max_path_depth = params.max_path_depth
-        self.use_tree_pos_enc_E = params.use_tree_pos_enc
+        self.use_tree_pos_enc_E = params.use_tree_pos_enc_E
         self.use_tree_pos_enc_D = params.use_tree_pos_enc_D
         if is_encoder:
             self.use_tree_rel_att = None if params.use_tree_rel_att == "" else params.use_tree_rel_att
@@ -659,14 +659,15 @@ class TransformerModel(nn.Module):
         bs = len(src_len)
         n_words = self.n_words        # dict size
 
-        logger.info(src_enc.size())
-        logger.info(src_len)
+        logger.info(src_enc.size())    # (32, 29, 256); (bs, max_seq_len, hid)
+        logger.info(src_len)           # (32); (bs); all_lens for sent in batch
         # expand to beam size the source latent representations / source lengths
         src_enc = src_enc.unsqueeze(1).expand((bs, beam_size) + src_enc.shape[1:]).contiguous().view((bs * beam_size,) + src_enc.shape[1:])
         src_len = src_len.unsqueeze(1).expand(bs, beam_size).contiguous().view(-1)
         logger.info('changed lens')
-        logger.info(src_enc.size())
-        logger.info(src_len)
+             # здесь предложение дублируется по beam_size раз подряд
+        logger.info(src_enc.size())   # (bs * beam_size, max_seq_len, hid)
+        logger.info(src_len)          # (bs * beam_size)
 
         # generated sentences (batch with beam current hypotheses)
         generated = src_len.new(max_len, bs * beam_size)  # upcoming output
@@ -694,9 +695,9 @@ class TransformerModel(nn.Module):
         # done sentences
         done = [False for _ in range(bs)]
 
-        logger.info(generated.size())
-        logger.info(positions.size())
-        logger.info(cur_len)
+        logger.info(generated.size())     # (512; 320); (max_len, bs * beam_size)
+        logger.info(positions.size())     # (512; 320); (max_len, bs * beam_size)
+        logger.info(cur_len)              # 1
 
         # for tree pos enc
         my_queues = [queue.LifoQueue() for i in range(beam_size * bs)]
@@ -708,6 +709,10 @@ class TransformerModel(nn.Module):
         parents = [0 for i in range(beam_size * bs)]
         prev_is_digits = [False for i in range(beam_size * bs)]
         is_rights, is_downs = [False for i in range(beam_size * bs)], [False for i in range(beam_size * bs)]
+
+        # tree_positions_batch by default
+        max_wd = self.max_path_width * self.max_path_depth
+        tree_positions_batch = torch.zeros(bs, max_len, max_wd, dtype=torch.float, device=src_enc.device)
 
         while cur_len < max_len:
 
@@ -833,8 +838,7 @@ class TransformerModel(nn.Module):
             tree_positions_list = [generate_positions(root_paths, self.max_path_width, self.max_path_depth)
                                    for root_paths in before_collate]
             bs = len(tree_positions_list)
-            max_wd = tree_positions_list[0].size(1)
-            tree_positions_batch = torch.zeros(bs, max_len, max_wd, dtype=torch.float, device=src_enc.device)
+            # max_wd = tree_positions_list[0].size(1)
             for i in range(len(tree_positions_list)):
                 tree_positions_batch[i, :tree_positions_list[i].size(0), :].copy_(tree_positions_list[i])
             tree_positions_batch = tree_positions_batch[:, :cur_len, :]

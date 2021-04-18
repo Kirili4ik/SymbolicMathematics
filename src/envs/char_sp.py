@@ -1546,10 +1546,10 @@ class EnvDataset(Dataset):
             tree_positions_batch_q[i, :tree_positions_list_q[i].size(0), :].copy_(tree_positions_list_q[i])
 
         tree_positions_list_a = [generate_positions(root_paths, self.max_path_width, self.max_path_depth)
-                               for root_paths in rps_a]
+                                 for root_paths in rps_a]
         bs = len(tree_positions_list_a)
         max_wd = tree_positions_list_a[0].size(1)
-        tree_positions_batch_a = torch.zeros(bs, x_len.max().item(), max_wd, dtype=torch.float)
+        tree_positions_batch_a = torch.zeros(bs, y_len.max().item(), max_wd, dtype=torch.float)
         for i in range(len(tree_positions_list_a)):
             tree_positions_batch_a[i, :tree_positions_list_a[i].size(0), :].copy_(tree_positions_list_a[i])
 
