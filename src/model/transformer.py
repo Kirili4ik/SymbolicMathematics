@@ -712,7 +712,12 @@ class TransformerModel(nn.Module):
 
         # tree_positions_batch by default
         max_wd = self.max_path_width * self.max_path_depth
-        tree_positions_batch = torch.zeros(bs, max_len, max_wd, dtype=torch.float, device=src_enc.device)
+        tree_positions_batch = torch.zeros(bs * beam_size, max_len, max_wd, dtype=torch.float, device=src_enc.device)
+        tree_positions_list = [generate_positions(root_paths, self.max_path_width, self.max_path_depth)
+                               for root_paths in before_collate]
+        for i in range(len(tree_positions_list)):
+            tree_positions_batch[i, :tree_positions_list[i].size(0), :].copy_(tree_positions_list[i])
+        tree_positions_batch = tree_positions_batch[:, :cur_len, :]
 
         while cur_len < max_len:
 
@@ -837,7 +842,7 @@ class TransformerModel(nn.Module):
             ### before collate -> ready stuff
             tree_positions_list = [generate_positions(root_paths, self.max_path_width, self.max_path_depth)
                                    for root_paths in before_collate]
-            bs = len(tree_positions_list)
+            # bs = len(tree_positions_list)
             # max_wd = tree_positions_list[0].size(1)
             for i in range(len(tree_positions_list)):
                 tree_positions_batch[i, :tree_positions_list[i].size(0), :].copy_(tree_positions_list[i])
