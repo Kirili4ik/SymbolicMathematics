@@ -1538,7 +1538,7 @@ class EnvDataset(Dataset):
 
 
         tree_positions_list_q = [generate_positions(root_paths, self.max_path_width, self.max_path_depth)
-                               for root_paths in rps_q]
+                                 for root_paths in rps_q]
         bs = len(tree_positions_list_q)
         max_wd = tree_positions_list_q[0].size(1)
         tree_positions_batch_q = torch.zeros(bs, x_len.max().item(), max_wd, dtype=torch.float)

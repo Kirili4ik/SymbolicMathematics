@@ -13,12 +13,80 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from src.misc import generate_relative_positions_matrix, relative_matmul, get_rel_mask, TreePositionalEncodings
+import queue
+from collections import OrderedDict
+
+from src.misc import generate_relative_positions_matrix, relative_matmul, get_rel_mask, TreePositionalEncodings, generate_positions
 
 N_MAX_POSITIONS = 4096  # maximum input sequence length
 
 
 logger = getLogger()
+
+
+### consts =(
+OPERATORS = {
+        # Elementary functions
+        'add': 2,
+        'sub': 2,
+        'mul': 2,
+        'div': 2,
+        'pow': 2,
+        'rac': 2,
+        'inv': 1,
+        'pow2': 1,
+        'pow3': 1,
+        'pow4': 1,
+        'pow5': 1,
+        'sqrt': 1,
+        'exp': 1,
+        'ln': 1,
+        'abs': 1,
+        'sign': 1,
+        # Trigonometric Functions
+        'sin': 1,
+        'cos': 1,
+        'tan': 1,
+        'cot': 1,
+        'sec': 1,
+        'csc': 1,
+        # Trigonometric Inverses
+        'asin': 1,
+        'acos': 1,
+        'atan': 1,
+        'acot': 1,
+        'asec': 1,
+        'acsc': 1,
+        # Hyperbolic Functions
+        'sinh': 1,
+        'cosh': 1,
+        'tanh': 1,
+        'coth': 1,
+        'sech': 1,
+        'csch': 1,
+        # Hyperbolic Inverses
+        'asinh': 1,
+        'acosh': 1,
+        'atanh': 1,
+        'acoth': 1,
+        'asech': 1,
+        'acsch': 1,
+        # Derivative
+        'derivative': 2,
+        # custom functions
+        'f': 1,
+        'g': 2,
+        'h': 3,
+    }
+
+symbols = ['I', 'INT+', 'INT-', 'INT', 'FLOAT', '-', '.', '10^']
+
+constants = ['pi', 'E']
+variables = ['x', 'y', 'z', 't', 'Y', "Y'", "Y''"]
+functions = ['f', 'g', 'h']
+elements = [str(i) for i in range(-10, 10)]
+coefficients = [f'a{i}' for i in range(10)]
+no_child_symbols = constants + variables + functions + elements + coefficients
 
 
 def Embedding(num_embeddings, embedding_dim, padding_idx=None):
@@ -548,6 +616,7 @@ class TransformerModel(nn.Module):
             else:
                 next_words = torch.multinomial(F.softmax(scores / sample_temperature, dim=1), 1).squeeze(1)
             assert next_words.size() == (bs,)
+            logger.info(next_words.size())
 
             # update generations / lengths / finished sentences / current length
             generated[cur_len] = next_words * unfinished_sents + self.pad_index * (1 - unfinished_sents)
@@ -588,11 +657,16 @@ class TransformerModel(nn.Module):
 
         # batch size / number of words
         bs = len(src_len)
-        n_words = self.n_words
+        n_words = self.n_words        # dict size
 
+        logger.info(src_enc.size())
+        logger.info(src_len)
         # expand to beam size the source latent representations / source lengths
         src_enc = src_enc.unsqueeze(1).expand((bs, beam_size) + src_enc.shape[1:]).contiguous().view((bs * beam_size,) + src_enc.shape[1:])
         src_len = src_len.unsqueeze(1).expand(bs, beam_size).contiguous().view(-1)
+        logger.info('changed lens')
+        logger.info(src_enc.size())
+        logger.info(src_len)
 
         # generated sentences (batch with beam current hypotheses)
         generated = src_len.new(max_len, bs * beam_size)  # upcoming output
@@ -620,20 +694,38 @@ class TransformerModel(nn.Module):
         # done sentences
         done = [False for _ in range(bs)]
 
+        logger.info(generated.size())
+        logger.info(positions.size())
+        logger.info(cur_len)
+
+        # for tree pos enc
+        my_queues = [queue.LifoQueue() for i in range(beam_size * bs)]
+        for q in my_queues:
+            q.put(-1)
+        my_ord_dicts = [OrderedDict([(i, '') for i in range(-1, max_len + 1)])     # аккуратно -- max_len
+                        for j in range(beam_size * bs)]
+        before_collate = [[] for i in range(beam_size * bs)]
+        parents = [0 for i in range(beam_size * bs)]
+        prev_is_digits = [False for i in range(beam_size * bs)]
+        is_rights, is_downs = [False for i in range(beam_size * bs)], [False for i in range(beam_size * bs)]
+
         while cur_len < max_len:
 
             # compute word scores
             tensor = self.forward(
                 'fwd',
-                x=generated[:cur_len],
+                x=generated[:cur_len],    # (max_len, bs * beam_size) -> (cur_len, bs * beam_size)
                 lengths=src_len.new(bs * beam_size).fill_(cur_len),
                 positions=positions[:cur_len],
                 causal=True,
                 src_enc=src_enc,
                 src_len=src_len,
-                cache=cache
+                cache=cache,
+                root_paths=tree_positions_batch[:, :cur_len, :]                # !!!!!!!!!!!
             )
             assert tensor.size() == (1, bs * beam_size, self.dim)
+            logger.info('size after dec.fwd()')
+            logger.info(tensor.size())
             tensor = tensor.data[-1, :, :]          # (bs * beam_size, dim)
             scores = self.proj(tensor)              # (bs * beam_size, n_words)
             scores = F.log_softmax(scores, dim=-1)  # (bs * beam_size, n_words)
@@ -692,9 +784,65 @@ class TransformerModel(nn.Module):
             beam_words = generated.new([x[1] for x in next_batch_beam])
             beam_idx = src_len.new([x[2] for x in next_batch_beam])
 
+            # для фразы sent_id нашел beam_size новых слов
+            for word_num, tpl in enumerate(next_batch_beam):
+                score, word, index = tpl
+                logger.info('in loop')
+                logger.info(score)
+                logger.info(word)
+                logger.info(index)
+                op_now = word       ### should be REAL WORD and not INDEX or smth
+                prev_is_digit = prev_is_digits[index]
+
+                if prev_is_digit:
+                    if op_now.isdigit():
+                        parents[index] = cur_len - 1                                ### index???
+                    else:
+                        parents[index] = my_queues[index].get()                     ### index???
+                        is_rights[index] = True
+
+                if cur_len != 0:
+                    my_ord_dicts[index][cur_len] += my_ord_dicts[index][parents[index]]      ### index???
+                    if is_rights[index]:
+                        last_step = '2'  # right
+                    elif is_downs[index]:
+                        last_step = '0'  # down
+                    else:
+                        last_step = '1'  # left
+
+                    my_ord_dicts[index][cur_len] += last_step
+                    is_rights[index], is_downs[index] = False, False
+
+                if op_now in OPERATORS or op_now in symbols:  # <=> node has children
+                    if op_now in OPERATORS and OPERATORS[op_now] == 2:  # <=> node has 2 children
+                        my_queues[index].put(cur_len)                                  ### index?
+                    else:
+                        is_downs[index] = True
+                    parents[index] = cur_len                                           ### index?
+                elif op_now in no_child_symbols:
+                    if op_now.isdigit() and cur_len + 1 < max_len:           # на конец проверять на eos token
+                        prev_is_digits[index] = True
+
+                                 # больше не будем в этом индексе ???
+                before_collate[index] = [[int(rp_elem) for rp_elem in list(my_ord_dicts[index][path])]
+                                         if my_ord_dicts[index][path] != ''
+                                         else [] for path in my_ord_dicts[index]]
+
+
+            ### before collate -> ready stuff
+            tree_positions_list = [generate_positions(root_paths, self.max_path_width, self.max_path_depth)
+                                   for root_paths in before_collate]
+            bs = len(tree_positions_list)
+            max_wd = tree_positions_list[0].size(1)
+            tree_positions_batch = torch.zeros(bs, max_len, max_wd, dtype=torch.float, device=src_enc.device)
+            for i in range(len(tree_positions_list)):
+                tree_positions_batch[i, :tree_positions_list[i].size(0), :].copy_(tree_positions_list[i])
+            tree_positions_batch = tree_positions_batch[:, :cur_len, :]
+
             # re-order batch and internal states
             generated = generated[:, beam_idx]
             generated[cur_len] = beam_words
+            # my reorder and [cur_len] = beam_words
             for k in cache.keys():
                 if k != 'slen':
                     cache[k] = (cache[k][0][beam_idx], cache[k][1][beam_idx])
