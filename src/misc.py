@@ -28,7 +28,8 @@ def generate_positions(root_paths, max_width, max_depth):
     # -> (seq_len, max_d, max_w)
     embeddings = embeddings.view(root_path_tensor.shape + (embeddings.shape[-1],))
     # -> (seq_len, max_d*max_w)
-    embeddings = embeddings.view((root_path_tensor.shape[0], -1))
+    embeddings = embeddings.view((root_path_tensor.shape[0], -1)) if root_path_tensor.shape[0] != 0 \
+                             else embeddings.view((1, -1))
     return embeddings
 
 
