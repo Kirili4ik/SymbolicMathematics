@@ -712,13 +712,13 @@ class TransformerModel(nn.Module):
 
         # tree_positions_batch by default
         max_wd = self.max_path_width * self.max_path_depth
-        tree_positions_batch = torch.zeros(bs * beam_size, max_len, max_wd, dtype=torch.float, device=src_enc.device)
+        tree_positions_batch = torch.zeros(bs * beam_size, max_len + 2, max_wd, dtype=torch.float, device=src_enc.device)
         tree_positions_list = [generate_positions(root_paths, self.max_path_width, self.max_path_depth)
                                for root_paths in before_collate]
-        # logger.info(tree_positions_batch.size())    # (320, 512, 64); (bs * beam_size, max_len, emb_size?)
+        # logger.info(tree_positions_batch.size())    # (320, 514, 64); (bs * beam_size, max_len + 2, emb_size?)
         for i in range(len(tree_positions_list)):
             tree_positions_batch[i, :tree_positions_list[i].size(0), :].copy_(tree_positions_list[i])
-        tree_positions_batch = tree_positions_batch[:, :cur_len, :]
+        # tree_positions_batch = tree_positions_batch[:, :cur_len, :]
 
         while cur_len < max_len:
 
@@ -841,19 +841,19 @@ class TransformerModel(nn.Module):
                     logger.info(before_collate[index])
 
             ### before collate -> ready stuff
-            logger.info(before_collate[0])
-            logger.info(len(before_collate[0]))
-            logger.info(before_collate[0][0])
+            logger.info(before_collate[0])                  # list of lists
+            logger.info(len(before_collate[0]))             # 514
+            logger.info(before_collate[0][0])               # []
             tree_positions_list = [generate_positions(root_paths, self.max_path_width, self.max_path_depth)
                                    for root_paths in before_collate]
-            logger.info(len(tree_positions_list))
+            logger.info(len(tree_positions_list))           # 320
             logger.info(tree_positions_list[0])
             logger.info(tree_positions_list[0].size())
             # bs = len(tree_positions_list)
             # max_wd = tree_positions_list[0].size(1)
             for i in range(len(tree_positions_list)):
                 tree_positions_batch[i, :tree_positions_list[i].size(0), :].copy_(tree_positions_list[i])
-            tree_positions_batch = tree_positions_batch[:, :cur_len, :]
+            # tree_positions_batch = tree_positions_batch[:, :cur_len, :]
 
             # re-order batch and internal states
             generated = generated[:, beam_idx]
