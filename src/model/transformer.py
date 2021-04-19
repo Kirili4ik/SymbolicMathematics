@@ -705,7 +705,7 @@ class TransformerModel(nn.Module):
             q.put(-1)
         my_ord_dicts = [OrderedDict([(i, '') for i in range(-1, max_len + 1)])     # аккуратно -- max_len
                         for j in range(beam_size * bs)]
-        before_collate = [[] for i in range(beam_size * bs)]
+        before_collate = [[[] for i in range(max_len)] for j in range(beam_size * bs)]
         parents = [0 for i in range(beam_size * bs)]
         prev_is_digits = [False for i in range(beam_size * bs)]
         is_rights, is_downs = [False for i in range(beam_size * bs)], [False for i in range(beam_size * bs)]
@@ -715,8 +715,8 @@ class TransformerModel(nn.Module):
         tree_positions_batch = torch.zeros(bs * beam_size, max_len, max_wd, dtype=torch.float, device=src_enc.device)
         tree_positions_list = [generate_positions(root_paths, self.max_path_width, self.max_path_depth)
                                for root_paths in before_collate]
-        logger.info(tree_positions_batch.size())
-        logger.info(tree_positions_list)
+        logger.info(tree_positions_batch.size())    # (320, 512, 64); (bs * beam_size, max_len, emb_size?)
+        logger.info(tree_positions_list)            # [[tensor([], size=(1, 0)), ...]
         for i in range(len(tree_positions_list)):
             tree_positions_batch[i, :tree_positions_list[i].size(0), :].copy_(tree_positions_list[i])
         tree_positions_batch = tree_positions_batch[:, :cur_len, :]

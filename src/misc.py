@@ -1,8 +1,8 @@
 import torch
 import multiprocessing as mp
 
-### tree pos enc ###
 
+### tree pos enc ###
 def generate_positions(root_paths, max_width, max_depth):
     """
     root_paths: List([ch_ids]) of size seq_len, ch_ids \in [0, 1, ..., max_width)
@@ -28,8 +28,7 @@ def generate_positions(root_paths, max_width, max_depth):
     # -> (seq_len, max_d, max_w)
     embeddings = embeddings.view(root_path_tensor.shape + (embeddings.shape[-1],))
     # -> (seq_len, max_d*max_w)
-    embeddings = embeddings.view((root_path_tensor.shape[0], -1)) if root_path_tensor.shape[0] != 0 \
-                             else embeddings.view((1, -1))
+    embeddings = embeddings.view((root_path_tensor.shape[0], -1))
     return embeddings
 
 
@@ -84,7 +83,6 @@ class TreePositionalEncodings(torch.nn.Module):
 
 
 ### tree rel att ###
-
 def generate_relative_positions_matrix(length,
                                        max_relative_positions,
                                        use_neg_dist,
