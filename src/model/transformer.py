@@ -814,7 +814,7 @@ class TransformerModel(nn.Module):
                 logger.info(word)
                 index = index.item() # + word_num % 10
                 logger.info(index)
-                op_now = self.id2word[word]       ### should be REAL WORD and not INDEX or smth
+                op_now = self.id2word[word.item()]       ### should be REAL WORD and not INDEX or smth
                 logger.info(op_now)
                 prev_is_digit = prev_is_digits[index]
 
