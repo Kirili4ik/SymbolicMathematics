@@ -804,6 +804,9 @@ class TransformerModel(nn.Module):
             beam_words = generated.new([x[1] for x in next_batch_beam])
             beam_idx = src_len.new([x[2] for x in next_batch_beam])
 
+            # my reorder and [cur_len] = beam_words
+            tree_positions_batch = tree_positions_batch[beam_idx, :, :]
+
             # для фразы sent_id нашел beam_size новых слов
             for word_num, tpl in enumerate(next_batch_beam):
                 _, word, index = tpl
@@ -861,16 +864,20 @@ class TransformerModel(nn.Module):
             logger.info(tree_positions_list[0].size())
             # bs = len(tree_positions_list)
             # max_wd = tree_positions_list[0].size(1)
+            # max_wd = tree_positions_list[0].size(1)
             for i in range(len(tree_positions_list)):
+                                         # cur_len?
                 tree_positions_batch[i, :tree_positions_list[i].size(0), :].copy_(tree_positions_list[i])
             # tree_positions_batch = tree_positions_batch[:, :cur_len, :]
 
             # re-order batch and internal states
-            generated = generated[:, beam_idx]
+            generated = generated[:, beam_idx]   # (max_len, bs * beam_size)
             generated[cur_len] = beam_words
-            # my reorder and [cur_len] = beam_words
+
             for k in cache.keys():
                 if k != 'slen':
+                    if cur_len < 2:
+                        logger.info(k)
                     cache[k] = (cache[k][0][beam_idx], cache[k][1][beam_idx])
 
             # update current length
