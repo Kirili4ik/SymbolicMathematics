@@ -809,9 +809,8 @@ class TransformerModel(nn.Module):
                 _, word, index = tpl
                 logger.info('in loop')
                 logger.info(word.item())
-                index = index.item() + word_num % 10
+                index = index.item() # + word_num % 10
                 logger.info(index)
-                logger.info(my_queues[index])
                 op_now = word       ### should be REAL WORD and not INDEX or smth
                 prev_is_digit = prev_is_digits[index]
 
