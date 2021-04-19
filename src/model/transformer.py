@@ -812,7 +812,7 @@ class TransformerModel(nn.Module):
                 _, word, index = tpl
                 logger.info('in loop')
                 logger.info(word)
-                index = index.item() # + word_num % 10
+                index = word_num  # index.item() # + word_num % 10
                 logger.info(index)
                 op_now = self.id2word[word.item()]       ### should be REAL WORD and not INDEX or smth
                 logger.info(op_now)
