@@ -456,6 +456,8 @@ class TransformerModel(nn.Module):
         assert lengths.size(0) == bs
         assert lengths.max().item() <= slen
         x = x.transpose(0, 1)  # batch size as dimension 0
+        logger.info('fwd start x size')
+        logger.info(x.size())
         if rel_matrix is not None:
             rel_matrix = rel_matrix.transpose(0, 2)   # s_len, s_len, bs ->  bs, s_len, s_len
         assert (src_enc is None) == (src_len is None)
@@ -729,6 +731,8 @@ class TransformerModel(nn.Module):
             # compute word scores
             logger.info('before fwd tree pos b size is')
             logger.info(tree_positions_batch[:, :cur_len, :].size())
+            logger.info('and generated:')
+            logger.info(generated[:cur_len].size())
             tensor = self.forward(
                 'fwd',
                 x=generated[:cur_len],    # (max_len, bs * beam_size) -> (cur_len, bs * beam_size)
