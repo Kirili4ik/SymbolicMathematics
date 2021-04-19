@@ -811,10 +811,11 @@ class TransformerModel(nn.Module):
             for word_num, tpl in enumerate(next_batch_beam):
                 _, word, index = tpl
                 logger.info('in loop')
-                logger.info(word.item())
+                logger.info(word)
                 index = index.item() # + word_num % 10
                 logger.info(index)
-                op_now = word       ### should be REAL WORD and not INDEX or smth
+                op_now = self.id2word[word]       ### should be REAL WORD and not INDEX or smth
+                logger.info(op_now)
                 prev_is_digit = prev_is_digits[index]
 
                 if prev_is_digit:
@@ -876,7 +877,7 @@ class TransformerModel(nn.Module):
 
             for k in cache.keys():
                 if k != 'slen':
-                    if cur_len < 2:
+                    if cur_len < 5:
                         logger.info(k)
                     cache[k] = (cache[k][0][beam_idx], cache[k][1][beam_idx])
 
