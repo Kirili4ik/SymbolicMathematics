@@ -715,8 +715,7 @@ class TransformerModel(nn.Module):
         tree_positions_batch = torch.zeros(bs * beam_size, max_len, max_wd, dtype=torch.float, device=src_enc.device)
         tree_positions_list = [generate_positions(root_paths, self.max_path_width, self.max_path_depth)
                                for root_paths in before_collate]
-        logger.info(tree_positions_batch.size())    # (320, 512, 64); (bs * beam_size, max_len, emb_size?)
-        logger.info(tree_positions_list)            # [[tensor([], size=(1, 0)), ...]
+        # logger.info(tree_positions_batch.size())    # (320, 512, 64); (bs * beam_size, max_len, emb_size?)
         for i in range(len(tree_positions_list)):
             tree_positions_batch[i, :tree_positions_list[i].size(0), :].copy_(tree_positions_list[i])
         tree_positions_batch = tree_positions_batch[:, :cur_len, :]
@@ -736,8 +735,6 @@ class TransformerModel(nn.Module):
                 root_paths=tree_positions_batch[:, :cur_len, :]                # !!!!!!!!!!!
             )
             assert tensor.size() == (1, bs * beam_size, self.dim)
-            logger.info('size after dec.fwd()')
-            logger.info(tensor.size())
             tensor = tensor.data[-1, :, :]          # (bs * beam_size, dim)
             scores = self.proj(tensor)              # (bs * beam_size, n_words)
             scores = F.log_softmax(scores, dim=-1)  # (bs * beam_size, n_words)
@@ -798,11 +795,13 @@ class TransformerModel(nn.Module):
 
             # для фразы sent_id нашел beam_size новых слов
             for word_num, tpl in enumerate(next_batch_beam):
-                score, word, index = tpl
+                _, word, index = tpl
                 logger.info('in loop')
-                logger.info(score)
-                logger.info(word)
-                logger.info(index)
+                logger.info(word.item())
+                index = index.item() + word_num
+                logger.info(index.item())
+                logger.info(next_words[word_num // 10][word_num])   # aka [sent_id, word_num]
+                logger.info(my_queues[index])
                 op_now = word       ### should be REAL WORD and not INDEX or smth
                 prev_is_digit = prev_is_digits[index]
 
