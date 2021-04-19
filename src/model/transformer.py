@@ -837,7 +837,8 @@ class TransformerModel(nn.Module):
                 before_collate[index] = [[int(rp_elem) for rp_elem in list(my_ord_dicts[index][path])]
                                          if my_ord_dicts[index][path] != ''
                                          else [] for path in my_ord_dicts[index]]
-
+                if word_num < 5:
+                    logger.info(before_collate[index])
 
             ### before collate -> ready stuff
             tree_positions_list = [generate_positions(root_paths, self.max_path_width, self.max_path_depth)
