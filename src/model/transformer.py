@@ -804,17 +804,26 @@ class TransformerModel(nn.Module):
             beam_words = generated.new([x[1] for x in next_batch_beam])
             beam_idx = src_len.new([x[2] for x in next_batch_beam])
 
-            # my reorder and [cur_len] = beam_words
+            # re-order batch and internal states
+            generated = generated[:, beam_idx]   # (max_len, bs * beam_size)
+
+            # my reorder
+            my_queues = my_queues[beam_idx]
+            my_ord_dicts = my_ord_dicts[beam_idx]
+            before_collate = before_collate[beam_idx]
+            parents = parents[beam_idx]
+            prev_is_digits = prev_is_digits[beam_idx]
+            is_rights, is_downs = is_rights[beam_idx], is_downs[beam_idx]
             tree_positions_batch = tree_positions_batch[beam_idx, :, :]
 
             # для фразы sent_id нашел beam_size новых слов
             for word_num, tpl in enumerate(next_batch_beam):
-                _, word, index = tpl
+                _, word, _ = tpl
                 logger.info('in loop')
                 logger.info(word)
                 index = word_num  # index.item() # + word_num % 10
                 logger.info(index)
-                op_now = self.id2word[word.item()]       ### should be REAL WORD and not INDEX or smth
+                op_now = self.id2word[word.item()]
                 logger.info(op_now)
                 prev_is_digit = prev_is_digits[index]
 
@@ -854,6 +863,7 @@ class TransformerModel(nn.Module):
                 if word_num < 5:
                     logger.info(before_collate[index])
 
+
             ### before collate -> ready stuff
             logger.info(before_collate[0])                  # list of lists
             logger.info(len(before_collate[0]))             # 514
@@ -872,13 +882,12 @@ class TransformerModel(nn.Module):
             # tree_positions_batch = tree_positions_batch[:, :cur_len, :]
 
             # re-order batch and internal states
-            generated = generated[:, beam_idx]   # (max_len, bs * beam_size)
             generated[cur_len] = beam_words
 
             for k in cache.keys():
                 if k != 'slen':
                     if cur_len < 5:
-                        logger.info(k)
+                        logger.info(cache[k])
                     cache[k] = (cache[k][0][beam_idx], cache[k][1][beam_idx])
 
             # update current length
