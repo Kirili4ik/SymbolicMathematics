@@ -841,8 +841,14 @@ class TransformerModel(nn.Module):
                     logger.info(before_collate[index])
 
             ### before collate -> ready stuff
+            logger.info(before_collate[0])
+            logger.info(len(before_collate[0]))
+            logger.info(before_collate[0][0])
             tree_positions_list = [generate_positions(root_paths, self.max_path_width, self.max_path_depth)
                                    for root_paths in before_collate]
+            logger.info(len(tree_positions_list))
+            logger.info(tree_positions_list[0])
+            logger.info(tree_positions_list[0].size())
             # bs = len(tree_positions_list)
             # max_wd = tree_positions_list[0].size(1)
             for i in range(len(tree_positions_list)):
