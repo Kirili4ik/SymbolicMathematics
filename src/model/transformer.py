@@ -715,6 +715,8 @@ class TransformerModel(nn.Module):
         tree_positions_batch = torch.zeros(bs * beam_size, max_len, max_wd, dtype=torch.float, device=src_enc.device)
         tree_positions_list = [generate_positions(root_paths, self.max_path_width, self.max_path_depth)
                                for root_paths in before_collate]
+        logger.info(tree_positions_batch.size())
+        logger.info(tree_positions_list)
         for i in range(len(tree_positions_list)):
             tree_positions_batch[i, :tree_positions_list[i].size(0), :].copy_(tree_positions_list[i])
         tree_positions_batch = tree_positions_batch[:, :cur_len, :]
