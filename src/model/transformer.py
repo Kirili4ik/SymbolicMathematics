@@ -499,7 +499,11 @@ class TransformerModel(nn.Module):
             if (self.is_encoder and self.use_pos_embeddings_E) or (self.is_decoder and self.use_pos_embeddings_D):
                 tensor = tensor + self.position_embeddings(positions).expand_as(tensor)
             if (self.is_encoder and self.use_tree_pos_enc_E) or (self.is_decoder and self.use_tree_pos_enc_D):
+                logger.info('in fwd doing tree pos enc;   root_paths, tens, tree_pos_enc')
+                logger.info(root_paths.size())
                 tree_pos_enc = self.tree_pos_encodings(root_paths)  # (bs, seq_len, emb_dim)
+                logger.info(tensor.size())
+                logger.info(tree_pos_enc.size())
                 tensor = tensor + tree_pos_enc
             tensor = self.layer_norm_emb(tensor)
             tensor = F.dropout(tensor, p=self.dropout, training=self.training)
@@ -723,6 +727,8 @@ class TransformerModel(nn.Module):
         while cur_len < max_len:
 
             # compute word scores
+            logger.info('before fwd tree pos b size is')
+            logger.info(tree_positions_batch[:, :cur_len, :].size())
             tensor = self.forward(
                 'fwd',
                 x=generated[:cur_len],    # (max_len, bs * beam_size) -> (cur_len, bs * beam_size)
