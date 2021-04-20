@@ -707,11 +707,14 @@ class TransformerModel(nn.Module):
         logger.info(cur_len)              # 1
 
         # for tree pos enc
-        my_queues = np.array([queue.LifoQueue() for i in range(beam_size * bs)])
+        my_queues = [queue.LifoQueue() for i in range(beam_size * bs)]
         for q in my_queues:
             q.put(-1)
-        my_ord_dicts = np.array([OrderedDict([(i, '') for i in range(-1, max_len + 1)])     # аккуратно -- max_len
-                        for j in range(beam_size * bs)])
+        my_queues_temp = [queue.LifoQueue() for i in range(beam_size * bs)]
+        my_ord_dicts = [OrderedDict([(i, '') for i in range(-1, max_len + 1)])     # аккуратно -- max_len
+                        for j in range(beam_size * bs)]
+        my_ord_dicts_temp = [OrderedDict()  # аккуратно -- max_len
+                             for j in range(beam_size * bs)]
         before_collate = [[[] for i in range(max_len)] for j in range(beam_size * bs)]
         parents = np.array([0 for i in range(beam_size * bs)])
         prev_is_digits = np.array([False for i in range(beam_size * bs)])
@@ -810,9 +813,13 @@ class TransformerModel(nn.Module):
             # my reorder
             beam_idx_np = beam_idx.cpu().numpy()
             logger.info(beam_idx_np)
+            # complex structures
             for i, ix in enumerate(beam_idx_np):
-                my_queues[i] = my_queues[ix].copy()
-                my_ord_dicts[i] = my_ord_dicts[ix].copy()
+                my_queues_temp[i] = my_queues[ix].copy()
+                my_ord_dicts_temp[i] = my_ord_dicts[ix].copy()
+            my_queues = my_queues_temp
+            my_ord_dicts = my_ord_dicts_temp
+
             parents = parents[beam_idx_np]
             prev_is_digits = prev_is_digits[beam_idx_np]
             is_rights, is_downs = is_rights[beam_idx_np], is_downs[beam_idx_np]
