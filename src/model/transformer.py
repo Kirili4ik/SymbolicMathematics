@@ -887,13 +887,13 @@ class TransformerModel(nn.Module):
             logger.info('0s LINE EXAMPLE GENERATED')
             logger.info(example)
             logger.info('0s LINE EXAMPLE TREE_POS')
-            for i in range(tree_positions_batch.size(1)):
+            for i in range(15): #tree_positions_batch.size(1)):
                 logger.info(tree_positions_batch[0, i, :])
 
             for k in cache.keys():
                 if k != 'slen':
-                    if cur_len < 5:
-                        logger.info(cache[k])
+                    #if cur_len < 5:
+                    #    logger.info(cache[k])
                     cache[k] = (cache[k][0][beam_idx], cache[k][1][beam_idx])
 
             # update current length
