@@ -880,13 +880,13 @@ class TransformerModel(nn.Module):
                 before_collate[index] = [[int(rp_elem) for rp_elem in list(my_ord_dicts[index][path])]
                                          if my_ord_dicts[index][path] != ''
                                          else [] for path in my_ord_dicts[index]]
-                logger.info('0s my_ord_dicts')
-                logger.info(my_ord_dicts[0])
-                logger.info('indexes my_ord_dicts')
+                #logger.info('0s my_ord_dicts')
+                #logger.info(my_ord_dicts[0])
+                #logger.info('indexes my_ord_dicts')
                 logger.info(my_ord_dicts[index])
 
-            logger.info('0s LINE EXAMPLE TREE_POS')
-            logger.info(my_ord_dicts[0])
+            #logger.info('0s LINE EXAMPLE TREE_POS')
+            #logger.info(my_ord_dicts[0])
 
             ### before collate -> ready stuff
             tree_positions_list = [generate_positions(root_paths.copy(), self.max_path_width, self.max_path_depth)
