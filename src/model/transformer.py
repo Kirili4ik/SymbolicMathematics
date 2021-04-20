@@ -455,8 +455,8 @@ class TransformerModel(nn.Module):
         assert lengths.size(0) == bs
         assert lengths.max().item() <= slen
         x = x.transpose(0, 1)  # batch size as dimension 0
-        logger.info('fwd start x size')
-        logger.info(x.size())
+        #logger.info('fwd start x size')
+        #logger.info(x.size())
         if rel_matrix is not None:
             rel_matrix = rel_matrix.transpose(0, 2)   # s_len, s_len, bs ->  bs, s_len, s_len
         assert (src_enc is None) == (src_len is None)
@@ -501,11 +501,11 @@ class TransformerModel(nn.Module):
             if (self.is_encoder and self.use_pos_embeddings_E) or (self.is_decoder and self.use_pos_embeddings_D):
                 tensor = tensor + self.position_embeddings(positions).expand_as(tensor)
             if (self.is_encoder and self.use_tree_pos_enc_E) or (self.is_decoder and self.use_tree_pos_enc_D):
-                logger.info('in fwd doing tree pos enc;   root_paths, tens, tree_pos_enc')
-                logger.info(root_paths.size())
+                #logger.info('in fwd doing tree pos enc;   root_paths, tens, tree_pos_enc')
+                #logger.info(root_paths.size())
                 tree_pos_enc = self.tree_pos_encodings(root_paths)  # (bs, seq_len, emb_dim)
-                logger.info(tensor.size())
-                logger.info(tree_pos_enc.size())
+                #logger.info(tensor.size())
+                #logger.info(tree_pos_enc.size())
                 tensor = tensor + tree_pos_enc
             tensor = self.layer_norm_emb(tensor)
             tensor = F.dropout(tensor, p=self.dropout, training=self.training)
@@ -622,7 +622,7 @@ class TransformerModel(nn.Module):
             else:
                 next_words = torch.multinomial(F.softmax(scores / sample_temperature, dim=1), 1).squeeze(1)
             assert next_words.size() == (bs,)
-            logger.info(next_words.size())
+            #logger.info(next_words.size())
 
             # update generations / lengths / finished sentences / current length
             generated[cur_len] = next_words * unfinished_sents + self.pad_index * (1 - unfinished_sents)
@@ -665,15 +665,15 @@ class TransformerModel(nn.Module):
         bs = len(src_len)
         n_words = self.n_words        # dict size
 
-        logger.info(src_enc.size())    # (32, 29, 256); (bs, max_seq_len, hid)
-        logger.info(src_len)           # (32); (bs); all_lens for sent in batch
+        #logger.info(src_enc.size())    # (32, 29, 256); (bs, max_seq_len, hid)
+        #logger.info(src_len)           # (32); (bs); all_lens for sent in batch
         # expand to beam size the source latent representations / source lengths
         src_enc = src_enc.unsqueeze(1).expand((bs, beam_size) + src_enc.shape[1:]).contiguous().view((bs * beam_size,) + src_enc.shape[1:])
         src_len = src_len.unsqueeze(1).expand(bs, beam_size).contiguous().view(-1)
-        logger.info('changed lens')
+        #logger.info('changed lens')
              # здесь предложение дублируется по beam_size раз подряд
-        logger.info(src_enc.size())   # (bs * beam_size, max_seq_len, hid)
-        logger.info(src_len)          # (bs * beam_size)
+        #logger.info(src_enc.size())   # (bs * beam_size, max_seq_len, hid)
+        #logger.info(src_len)          # (bs * beam_size)
 
         # generated sentences (batch with beam current hypotheses)
         generated = src_len.new(max_len, bs * beam_size)  # upcoming output
@@ -701,9 +701,9 @@ class TransformerModel(nn.Module):
         # done sentences
         done = [False for _ in range(bs)]
 
-        logger.info(generated.size())     # (512; 320); (max_len, bs * beam_size)
-        logger.info(positions.size())     # (512; 320); (max_len, bs * beam_size)
-        logger.info(cur_len)              # 1
+        #logger.info(generated.size())     # (512; 320); (max_len, bs * beam_size)
+        #logger.info(positions.size())     # (512; 320); (max_len, bs * beam_size)
+        #logger.info(cur_len)              # 1
 
         # for tree pos enc
         my_queues = [deque([-1]) for i in range(beam_size * bs)]
@@ -730,10 +730,10 @@ class TransformerModel(nn.Module):
         while cur_len < max_len:
 
             # compute word scores
-            logger.info('before fwd tree pos b size is')
-            logger.info(tree_positions_batch[:, :cur_len, :].size())
-            logger.info('and generated:')
-            logger.info(generated[:cur_len].size())
+            #logger.info('before fwd tree pos b size is')
+            #logger.info(tree_positions_batch[:, :cur_len, :].size())
+            #logger.info('and generated:')
+            #logger.info(generated[:cur_len].size())
             tensor = self.forward(
                 'fwd',
                 x=generated[:cur_len],    # (max_len, bs * beam_size) -> (cur_len, bs * beam_size)
@@ -809,7 +809,7 @@ class TransformerModel(nn.Module):
 
             # my reorder
             beam_idx_np = beam_idx.cpu().numpy()
-            logger.info(beam_idx_np)
+            #logger.info(beam_idx_np)
             # complex structures
             for i, ix in enumerate(beam_idx_np):
                 my_queues_temp[i] = my_queues[ix].copy()
@@ -908,8 +908,8 @@ class TransformerModel(nn.Module):
             for i in range(generated.size(1)):
                 example += self.id2word[generated[i, 0].item()]
                 example += ' '
-            logger.info('0s LINE EXAMPLE GENERATED')
-            logger.info(example)
+            #logger.info('0s LINE EXAMPLE GENERATED')
+            #logger.info(example)
 
             for k in cache.keys():
                 if k != 'slen':
