@@ -885,7 +885,7 @@ class TransformerModel(nn.Module):
                 #logger.info('0s my_ord_dicts')
                 #logger.info(my_ord_dicts[0])
                 #logger.info('indexes my_ord_dicts')
-                logger.info(my_ord_dicts[index])
+                #logger.info(my_ord_dicts[index])
 
             #logger.info('0s LINE EXAMPLE TREE_POS')
             #logger.info(my_ord_dicts[0])
