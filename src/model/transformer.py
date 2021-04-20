@@ -707,15 +707,15 @@ class TransformerModel(nn.Module):
         logger.info(cur_len)              # 1
 
         # for tree pos enc
-        my_queues = [queue.LifoQueue() for i in range(beam_size * bs)]
+        my_queues = np.array([queue.LifoQueue() for i in range(beam_size * bs)])
         for q in my_queues:
             q.put(-1)
-        my_ord_dicts = [OrderedDict([(i, '') for i in range(-1, max_len + 1)])     # аккуратно -- max_len
-                        for j in range(beam_size * bs)]
+        my_ord_dicts = np.array([OrderedDict([(i, '') for i in range(-1, max_len + 1)])     # аккуратно -- max_len
+                        for j in range(beam_size * bs)])
         before_collate = [[[] for i in range(max_len)] for j in range(beam_size * bs)]
-        parents = [0 for i in range(beam_size * bs)]
-        prev_is_digits = [False for i in range(beam_size * bs)]
-        is_rights, is_downs = [False for i in range(beam_size * bs)], [False for i in range(beam_size * bs)]
+        parents = np.array([0 for i in range(beam_size * bs)])
+        prev_is_digits = np.array([False for i in range(beam_size * bs)])
+        is_rights, is_downs = np.array([False for i in range(beam_size * bs)]), np.array([False for i in range(beam_size * bs)])
 
         # tree_positions_batch by default
         max_wd = self.max_path_width * self.max_path_depth
@@ -808,13 +808,14 @@ class TransformerModel(nn.Module):
             generated = generated[:, beam_idx]   # (max_len, bs * beam_size)
 
             # my reorder
-            my_queues = my_queues[beam_idx]
-            my_ord_dicts = my_ord_dicts[beam_idx]
-            before_collate = before_collate[beam_idx]
-            parents = parents[beam_idx]
-            prev_is_digits = prev_is_digits[beam_idx]
-            is_rights, is_downs = is_rights[beam_idx], is_downs[beam_idx]
-            tree_positions_batch = tree_positions_batch[beam_idx, :, :]
+            beam_idx_np = beam_idx.cpu().numpy()
+            logger.info(beam_idx_np)
+            my_queues = my_queues[beam_idx_np]
+            my_ord_dicts = my_ord_dicts[beam_idx_np]
+            parents = parents[beam_idx_np]
+            prev_is_digits = prev_is_digits[beam_idx_np]
+            is_rights, is_downs = is_rights[beam_idx_np], is_downs[beam_idx_np]
+            tree_positions_batch = tree_positions_batch[beam_idx_np, :, :]
 
             # для фразы sent_id нашел beam_size новых слов
             for word_num, tpl in enumerate(next_batch_beam):
