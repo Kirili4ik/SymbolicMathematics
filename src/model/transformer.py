@@ -13,8 +13,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import queue
-from collections import OrderedDict
+from collections import OrderedDict, deque
 
 from src.misc import generate_relative_positions_matrix, relative_matmul, get_rel_mask, TreePositionalEncodings, generate_positions
 
@@ -707,10 +706,8 @@ class TransformerModel(nn.Module):
         logger.info(cur_len)              # 1
 
         # for tree pos enc
-        my_queues = [queue.LifoQueue() for i in range(beam_size * bs)]
-        for q in my_queues:
-            q.put(-1)
-        my_queues_temp = [queue.LifoQueue() for i in range(beam_size * bs)]
+        my_queues = [deque([-1]) for i in range(beam_size * bs)]
+        my_queues_temp = [deque() for i in range(beam_size * bs)]
         my_ord_dicts = [OrderedDict([(i, '') for i in range(-1, max_len + 1)])     # аккуратно -- max_len
                         for j in range(beam_size * bs)]
         my_ord_dicts_temp = [OrderedDict()  # аккуратно -- max_len
@@ -840,7 +837,7 @@ class TransformerModel(nn.Module):
                     if op_now.isdigit():
                         parents[index] = cur_len - 1                                ### index???
                     else:
-                        parents[index] = my_queues[index].get()                     ### index???
+                        parents[index] = my_queues[index].pop()                     ### index???
                         is_rights[index] = True
 
                 if cur_len != 0:
@@ -857,7 +854,7 @@ class TransformerModel(nn.Module):
 
                 if op_now in OPERATORS or op_now in symbols:  # <=> node has children
                     if op_now in OPERATORS and OPERATORS[op_now] == 2:  # <=> node has 2 children
-                        my_queues[index].put(cur_len)                                  ### index?
+                        my_queues[index].append(cur_len)                                  ### index?
                     else:
                         is_downs[index] = True
                     parents[index] = cur_len                                           ### index?
