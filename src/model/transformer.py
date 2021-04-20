@@ -820,12 +820,12 @@ class TransformerModel(nn.Module):
             # для фразы sent_id нашел beam_size новых слов
             for word_num, tpl in enumerate(next_batch_beam):
                 _, word, _ = tpl
-                logger.info('in loop')
-                logger.info(word)
+                #logger.info('in loop')
+                #logger.info(word)
                 index = word_num  # index.item() # + word_num % 10
-                logger.info(index)
+                #logger.info(index)
                 op_now = self.id2word[word.item()]
-                logger.info(op_now)
+                #logger.info(op_now)
                 prev_is_digit = prev_is_digits[index]
 
                 if prev_is_digit:
@@ -887,8 +887,7 @@ class TransformerModel(nn.Module):
             logger.info('0s LINE EXAMPLE GENERATED')
             logger.info(example)
             logger.info('0s LINE EXAMPLE TREE_POS')
-            for i in range(15): #tree_positions_batch.size(1)):
-                logger.info(tree_positions_batch[0, i, :])
+            logger.info(before_collate[0])
 
             for k in cache.keys():
                 if k != 'slen':
