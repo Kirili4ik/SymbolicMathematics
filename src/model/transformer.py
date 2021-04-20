@@ -810,8 +810,9 @@ class TransformerModel(nn.Module):
             # my reorder
             beam_idx_np = beam_idx.cpu().numpy()
             logger.info(beam_idx_np)
-            my_queues = my_queues[beam_idx_np]
-            my_ord_dicts = my_ord_dicts[beam_idx_np]
+            for i, ix in enumerate(beam_idx_np):
+                my_queues[i] = my_queues[ix].copy()
+                my_ord_dicts[i] = my_ord_dicts[ix].copy()
             parents = parents[beam_idx_np]
             prev_is_digits = prev_is_digits[beam_idx_np]
             is_rights, is_downs = is_rights[beam_idx_np], is_downs[beam_idx_np]
