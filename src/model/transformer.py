@@ -832,6 +832,7 @@ class TransformerModel(nn.Module):
                 op_now = self.id2word[word.item()]
                 #logger.info(op_now)
                 prev_is_digit = prev_is_digits[index]
+                prev_is_digits[index] = False
 
                 if prev_is_digit:
                     if op_now.isdigit():
@@ -839,6 +840,7 @@ class TransformerModel(nn.Module):
                     else:
                         parents[index] = my_queues[index].pop()                     ### index???
                         is_rights[index] = True
+
 
                 if cur_len != 0:
                     my_ord_dicts[index][cur_len] += my_ord_dicts[index][parents[index]]      ### index???
@@ -861,6 +863,10 @@ class TransformerModel(nn.Module):
                 elif op_now in no_child_symbols:
                     if op_now.isdigit() and cur_len + 1 < max_len:           # на конец проверять на eos token
                         prev_is_digits[index] = True
+                    else:
+                        parents[index] = my_queues[index].pop()  ### index???
+                        is_rights[index] = True
+
 
                                  # больше не будем в этом индексе ???
                 before_collate[index] = [[int(rp_elem) for rp_elem in list(my_ord_dicts[index][path])]
