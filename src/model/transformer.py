@@ -824,12 +824,14 @@ class TransformerModel(nn.Module):
 
             # для фразы sent_id нашел beam_size новых слов
             for word_num, tpl in enumerate(next_batch_beam):
-                _, word, _ = tpl
+                _, word_id, _ = tpl
                 #logger.info('in loop')
-                #logger.info(word)
+                #logger.info(word_id)
                 index = word_num  # index.item() # + word_num % 10
                 #logger.info(index)
-                op_now = self.id2word[word.item()]
+                if word_id == self.eos_index or cur_len + 1 == max_len:
+                    continue
+                op_now = self.id2word[word_id.item()]
                 #logger.info(op_now)
                 prev_is_digit = prev_is_digits[index]
                 prev_is_digits[index] = False
@@ -838,8 +840,11 @@ class TransformerModel(nn.Module):
                     if op_now.isdigit():
                         parents[index] = cur_len - 1                                ### index???
                     else:
-                        parents[index] = my_queues[index].pop()                     ### index???
-                        is_rights[index] = True
+                        if my_queues[index].__len__() == 0:
+                            parents[index] = 1
+                        else:
+                            parents[index] = my_queues[index].pop()                     ### index???
+                            is_rights[index] = True
 
 
                 if cur_len != 0:
@@ -864,8 +869,11 @@ class TransformerModel(nn.Module):
                     if op_now.isdigit() and cur_len + 1 < max_len:           # на конец проверять на eos token
                         prev_is_digits[index] = True
                     else:
-                        parents[index] = my_queues[index].pop()  ### index???
-                        is_rights[index] = True
+                        if my_queues[index].__len__() == 0:
+                            parents[index] = 1
+                        else:
+                            parents[index] = my_queues[index].pop()  ### index???
+                            is_rights[index] = True
 
 
                                  # больше не будем в этом индексе ???
