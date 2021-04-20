@@ -861,18 +861,13 @@ class TransformerModel(nn.Module):
                 before_collate[index] = [[int(rp_elem) for rp_elem in list(my_ord_dicts[index][path])]
                                          if my_ord_dicts[index][path] != ''
                                          else [] for path in my_ord_dicts[index]]
-                if word_num < 5:
-                    logger.info(before_collate[index])
 
 
             ### before collate -> ready stuff
-            logger.info(before_collate[0])                  # list of lists
             logger.info(len(before_collate[0]))             # 514
-            logger.info(before_collate[0][0])               # []
             tree_positions_list = [generate_positions(root_paths, self.max_path_width, self.max_path_depth)
                                    for root_paths in before_collate]
             logger.info(len(tree_positions_list))           # 320
-            logger.info(tree_positions_list[0])
             logger.info(tree_positions_list[0].size())
             # bs = len(tree_positions_list)
             # max_wd = tree_positions_list[0].size(1)
@@ -884,6 +879,16 @@ class TransformerModel(nn.Module):
 
             # re-order batch and internal states
             generated[cur_len] = beam_words
+
+            example = ''
+            for i in range(generated.size(1)):
+                example += self.id2word[generated[i, 0].item()]
+                example += ' '
+            logger.info('0s LINE EXAMPLE GENERATED')
+            logger.info(example)
+            logger.info('0s LINE EXAMPLE TREE_POS')
+            for i in range(tree_positions_batch.size(1)):
+                logger.info(tree_positions_batch[0, i, :])
 
             for k in cache.keys():
                 if k != 'slen':
