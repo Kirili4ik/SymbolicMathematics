@@ -831,7 +831,11 @@ class TransformerModel(nn.Module):
                 #logger.info(index)
                 if word_id == self.eos_index or cur_len + 1 == max_len:
                     continue
-                op_now = self.id2word[word_id.item()]
+                if isinstance(word_id, int):
+                    logger.info(tpl)
+                    op_now = self.id2wordp[word_id]
+                else:
+                    op_now = self.id2word[word_id.item()]
                 #logger.info(op_now)
                 prev_is_digit = prev_is_digits[index]
                 prev_is_digits[index] = False
