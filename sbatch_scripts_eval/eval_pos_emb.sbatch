@@ -6,5 +6,5 @@
 #SBATCH --cpus-per-task=2          # Требуемое кол-во CPU
 
 source activate sym-math
-srun python ../main.py --exp_name eval_pos_emb_nodups --eval_only True --reload_model "/home/kpgelvan/SymbolicMathematics/dumped/pos_emb_0202/269255/checkpoint.pth" --tasks "prim_fwd" --reload_data "prim_fwd,../data/prim_fwd.train,../data/prim_fwd.no_dups_valtest,../data/prim_fwd.no_dups_valtest" --dump_path '../dumped/' --beam_eval True --beam_size 10 --eval_verbose 1 --use_pos_embeddings_E True --use_pos_embeddings_D True
+srun python ../main.py --exp_name eval_pos_emb_nodups --eval_only True --reload_model "/home/kpgelvan/SymbolicMathematics/dumped/pos_emb_0202/269255/checkpoint.pth" --tasks "prim_fwd" --reload_data "prim_fwd,../data/prim_fwd.train_clean,../data/prim_fwd.no_dups_valtest,../data/prim_fwd.no_dups_valtest" --dump_path '../dumped/' --beam_eval True --beam_size 10 --eval_verbose 1 --use_pos_embeddings_E True --use_pos_embeddings_D True
 
