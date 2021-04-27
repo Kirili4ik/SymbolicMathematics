@@ -81,9 +81,11 @@ def get_parser():
     parser.add_argument("--sinusoidal_embeddings", type=bool_flag, default=False,
                         help="Use sinusoidal embeddings")
     parser.add_argument('--max_relative_pos', type=int, default=0,
-                        help='Max value for relative position representations')
+                        help='Max value for seq relative position representations')
     parser.add_argument('--use_neg_dist', type=bool_flag, default=False,
-                        help='Use negative distance for relative position representations')
+                        help='Use negative distance for seq relative position representations')
+    parser.add_argument('--use_encdec_seq_rel_att', type=bool_flag, default=False,
+                        help='Use seq relative attention in encoder-decoder attention')
     parser.add_argument('--use_tree_rel_att', type=str, default="",
                         help='Type of tree relative attention to use. Requires reload_rel_matrices & tree_rel_vocab_size')
     parser.add_argument('--tree_rel_vocab_size', type=int, default=0,

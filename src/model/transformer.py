@@ -134,6 +134,7 @@ class MultiHeadAttention(nn.Module):
     NEW_ID = itertools.count()
 
     def __init__(self, n_heads, dim, dropout, max_relative_positions=0, use_neg_dist=False,
+                 use_encdec_seq_rel_att=False,
                  use_tree_rel_att=None, tree_rel_vocab_size=0):
         super().__init__()
         self.layer_id = next(MultiHeadAttention.NEW_ID)
@@ -149,6 +150,7 @@ class MultiHeadAttention(nn.Module):
 
         self.max_relative_positions = max_relative_positions
         self.use_neg_dist = use_neg_dist
+        self.use_encdec_seq_rel_att = use_encdec_seq_rel_att
         if max_relative_positions > 0:
             vocab_size = max_relative_positions * 2 + 1 \
                 if use_neg_dist else max_relative_positions + 1
@@ -207,7 +209,11 @@ class MultiHeadAttention(nn.Module):
                     k, v = cache[self.layer_id]
             cache[self.layer_id] = (k, v)
 
-        if kv is None and self.max_relative_positions > 0:
+        use_seq_rel_att = True if kv is None and self.max_relative_positions > 0 or \
+                                  kv is not None and self.use_encdec_seq_rel_att \
+                          else False
+
+        if use_seq_rel_att:
             key_len = k.size(2)
             #print('key_len', key_len)
 
@@ -229,7 +235,7 @@ class MultiHeadAttention(nn.Module):
         q_k = torch.matmul(q, k.transpose(2, 3))                              # (bs, n_heads, qlen, klen)
         mask = (mask == 0).view(mask_reshape).expand_as(q_k)                  # (bs, n_heads, qlen, klen)
 
-        if kv is None and self.max_relative_positions > 0:
+        if use_seq_rel_att:
 
             #logger.info(q.size())
             #logger.info(relations_k.size())
@@ -287,7 +293,7 @@ class MultiHeadAttention(nn.Module):
         weights = F.dropout(weights, p=self.dropout, training=self.training)  # (bs, n_heads, qlen, klen)
         context = torch.matmul(weights, v)                                    # (bs, n_heads, qlen, dim_per_head)
 
-        if kv is None and self.max_relative_positions > 0:
+        if use_seq_rel_att:
 
             #print('weights or drop(softmax(mask(q_k))) size', weights.size())
             #print('weights or drop(softmax(mask(q_k)))')
@@ -376,6 +382,7 @@ class TransformerModel(nn.Module):
         assert self.dim % self.n_heads == 0, 'transformer dim must be a multiple of n_heads'
         self.max_relative_pos = params.max_relative_pos
         self.use_neg_dist = params.use_neg_dist
+        self.use_encdec_seq_rel_att = params.use_encdec_seq_rel_att
         self.max_path_width = params.max_path_width
         self.max_path_depth = params.max_path_depth
         self.use_tree_pos_enc_E = params.use_tree_pos_enc_E
@@ -412,6 +419,7 @@ class TransformerModel(nn.Module):
         for layer_id in range(self.n_layers):
             self.attentions.append(MultiHeadAttention(self.n_heads, self.dim, dropout=self.attention_dropout,
                                    max_relative_positions=self.max_relative_pos, use_neg_dist=self.use_neg_dist,
+                                   use_encdec_seq_rel_att=self.use_encdec_seq_rel_att,
                                    use_tree_rel_att=self.use_tree_rel_att, tree_rel_vocab_size=self.tree_rel_vocab_size))
             self.layer_norm1.append(nn.LayerNorm(self.dim, eps=1e-12))
             if self.is_decoder:
