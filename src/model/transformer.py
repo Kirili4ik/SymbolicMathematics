@@ -705,7 +705,7 @@ class TransformerModel(nn.Module):
         #logger.info(positions.size())     # (512; 320); (max_len, bs * beam_size)
         #logger.info(cur_len)              # 1
 
-        is_pos_enc = (self.is_encoder and self.use_pos_embeddings_E) or (self.is_decoder and self.use_pos_embeddings_D)
+        is_pos_enc = (self.is_encoder and self.use_tree_pos_enc_E) or (self.is_decoder and self.use_tree_pos_enc_D)
         # for tree pos enc
         if is_pos_enc:
             my_queues = [deque([-1]) for i in range(beam_size * bs)]
