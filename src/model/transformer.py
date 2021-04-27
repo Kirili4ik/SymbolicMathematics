@@ -705,27 +705,30 @@ class TransformerModel(nn.Module):
         #logger.info(positions.size())     # (512; 320); (max_len, bs * beam_size)
         #logger.info(cur_len)              # 1
 
+        is_pos_enc = (self.is_encoder and self.use_pos_embeddings_E) or (self.is_decoder and self.use_pos_embeddings_D)
         # for tree pos enc
-        my_queues = [deque([-1]) for i in range(beam_size * bs)]
-        my_queues_temp = [deque() for i in range(beam_size * bs)]
-        my_ord_dicts = [OrderedDict([(i, '') for i in range(-1, max_len + 1)])     # аккуратно -- max_len
-                        for j in range(beam_size * bs)]
-        my_ord_dicts_temp = [OrderedDict()  # аккуратно -- max_len
-                             for j in range(beam_size * bs)]
-        before_collate = [[[] for i in range(max_len)] for j in range(beam_size * bs)]
-        parents = np.array([0 for i in range(beam_size * bs)])
-        prev_is_digits = np.array([False for i in range(beam_size * bs)])
-        is_rights, is_downs = np.array([False for i in range(beam_size * bs)]), np.array([False for i in range(beam_size * bs)])
+        if is_pos_enc:
+            my_queues = [deque([-1]) for i in range(beam_size * bs)]
+            my_queues_temp = [deque() for i in range(beam_size * bs)]
+            my_ord_dicts = [OrderedDict([(i, '') for i in range(-1, max_len + 1)])     # аккуратно -- max_len
+                            for j in range(beam_size * bs)]
+            my_ord_dicts_temp = [OrderedDict()  # аккуратно -- max_len
+                                 for j in range(beam_size * bs)]
+            before_collate = [[[] for i in range(max_len)] for j in range(beam_size * bs)]
+            parents = np.array([0 for i in range(beam_size * bs)])
+            prev_is_digits = np.array([False for i in range(beam_size * bs)])
+            is_rights, is_downs = np.array([False for i in range(beam_size * bs)]), np.array([False for i in range(beam_size * bs)])
 
-        # tree_positions_batch by default
-        max_wd = self.max_path_width * self.max_path_depth
-        tree_positions_batch = torch.zeros(bs * beam_size, max_len + 2, max_wd, dtype=torch.float, device=src_enc.device)
-        tree_positions_list = [generate_positions(root_paths.copy(), self.max_path_width, self.max_path_depth)
-                               for root_paths in before_collate]
-        # logger.info(tree_positions_batch.size())    # (320, 514, 64); (bs * beam_size, max_len + 2, emb_size?)
-        for i in range(len(tree_positions_list)):
-            tree_positions_batch[i, :tree_positions_list[i].size(0), :].copy_(tree_positions_list[i])
-        # tree_positions_batch = tree_positions_batch[:, :cur_len, :]
+            # tree_positions_batch by default
+            max_wd = self.max_path_width * self.max_path_depth
+            tree_positions_batch = torch.zeros(bs * beam_size, max_len + 2, max_wd, dtype=torch.float, device=src_enc.device)
+            tree_positions_list = [generate_positions(root_paths.copy(), self.max_path_width, self.max_path_depth)
+                                   for root_paths in before_collate]
+            # logger.info(tree_positions_batch.size())    # (320, 514, 64); (bs * beam_size, max_len + 2, emb_size?)
+            for i in range(len(tree_positions_list)):
+                tree_positions_batch[i, :tree_positions_list[i].size(0), :].copy_(tree_positions_list[i])
+        else:
+            tree_positions_batch = None
 
         while cur_len < max_len:
 
@@ -743,7 +746,7 @@ class TransformerModel(nn.Module):
                 src_enc=src_enc,
                 src_len=src_len,
                 cache=cache,
-                root_paths=tree_positions_batch[:, :cur_len, :]                # !!!!!!!!!!!
+                root_paths=tree_positions_batch[:, :cur_len, :] if tree_positions_batch is not None else None # !!!!!!!!!!!
             )
             assert tensor.size() == (1, bs * beam_size, self.dim)
             tensor = tensor.data[-1, :, :]          # (bs * beam_size, dim)
@@ -808,98 +811,99 @@ class TransformerModel(nn.Module):
             generated = generated[:, beam_idx]   # (max_len, bs * beam_size)
 
             # my reorder
-            beam_idx_np = beam_idx.cpu().numpy()
-            #logger.info(beam_idx_np)
-            # complex structures
-            for i, ix in enumerate(beam_idx_np):
-                my_queues_temp[i] = my_queues[ix].copy()
-                my_ord_dicts_temp[i] = my_ord_dicts[ix].copy()
-            my_queues = my_queues_temp
-            my_ord_dicts = my_ord_dicts_temp
+            if is_pos_enc:
+                beam_idx_np = beam_idx.cpu().numpy()
+                #logger.info(beam_idx_np)
+                # complex structures
+                for i, ix in enumerate(beam_idx_np):
+                    my_queues_temp[i] = my_queues[ix].copy()
+                    my_ord_dicts_temp[i] = my_ord_dicts[ix].copy()
+                my_queues = my_queues_temp
+                my_ord_dicts = my_ord_dicts_temp
 
-            parents = parents[beam_idx_np]
-            prev_is_digits = prev_is_digits[beam_idx_np]
-            is_rights, is_downs = is_rights[beam_idx_np], is_downs[beam_idx_np]
-            tree_positions_batch = tree_positions_batch[beam_idx_np, :, :]
+                parents = parents[beam_idx_np]
+                prev_is_digits = prev_is_digits[beam_idx_np]
+                is_rights, is_downs = is_rights[beam_idx_np], is_downs[beam_idx_np]
+                tree_positions_batch = tree_positions_batch[beam_idx_np, :, :]
 
-            # для фразы sent_id нашел beam_size новых слов
-            for word_num, tpl in enumerate(next_batch_beam):
-                _, word_id, _ = tpl
-                #logger.info('in loop')
-                #logger.info(word_id)
-                index = word_num  # index.item() # + word_num % 10
-                #logger.info(index)
+                # для фразы sent_id нашел beam_size новых слов
+                for word_num, tpl in enumerate(next_batch_beam):
+                    _, word_id, _ = tpl
+                    #logger.info('in loop')
+                    #logger.info(word_id)
+                    index = word_num  # index.item() # + word_num % 10
+                    #logger.info(index)
 
-                # eos or max_len or done
-                if word_id == self.eos_index or cur_len + 1 == max_len or isinstance(word_id, int):
-                    continue
-                op_now = self.id2word[word_id.item()]
-                #logger.info(op_now)
-                prev_is_digit = prev_is_digits[index]
-                prev_is_digits[index] = False
+                    # eos or max_len or done
+                    if word_id == self.eos_index or cur_len + 1 == max_len or isinstance(word_id, int):
+                        continue
+                    op_now = self.id2word[word_id.item()]
+                    #logger.info(op_now)
+                    prev_is_digit = prev_is_digits[index]
+                    prev_is_digits[index] = False
 
-                if prev_is_digit:
-                    if op_now.isdigit():
-                        parents[index] = cur_len - 1                                ### index???
-                    else:
-                        if my_queues[index].__len__() == 0:
-                            parents[index] = 1
+                    if prev_is_digit:
+                        if op_now.isdigit():
+                            parents[index] = cur_len - 1                                ### index???
                         else:
-                            parents[index] = my_queues[index].pop()                     ### index???
-                            is_rights[index] = True
+                            if my_queues[index].__len__() == 0:
+                                parents[index] = 1
+                            else:
+                                parents[index] = my_queues[index].pop()                     ### index???
+                                is_rights[index] = True
 
 
-                if cur_len != 0:
-                    my_ord_dicts[index][cur_len] += my_ord_dicts[index][parents[index]]      ### index???
-                    if is_rights[index]:
-                        last_step = '2'  # right
-                    elif is_downs[index]:
-                        last_step = '0'  # down
-                    else:
-                        last_step = '1'  # left
-
-                    my_ord_dicts[index][cur_len] += last_step
-                    is_rights[index], is_downs[index] = False, False
-
-                if op_now in OPERATORS or op_now in symbols:  # <=> node has children
-                    if op_now in OPERATORS and OPERATORS[op_now] == 2:  # <=> node has 2 children
-                        my_queues[index].append(cur_len)                                  ### index?
-                    else:
-                        is_downs[index] = True
-                    parents[index] = cur_len                                           ### index?
-                elif op_now in no_child_symbols:
-                    if op_now.isdigit() and cur_len + 1 < max_len:           # на конец проверять на eos token
-                        prev_is_digits[index] = True
-                    else:
-                        if my_queues[index].__len__() == 0:
-                            parents[index] = 1
+                    if cur_len != 0:
+                        my_ord_dicts[index][cur_len] += my_ord_dicts[index][parents[index]]      ### index???
+                        if is_rights[index]:
+                            last_step = '2'  # right
+                        elif is_downs[index]:
+                            last_step = '0'  # down
                         else:
-                            parents[index] = my_queues[index].pop()  ### index???
-                            is_rights[index] = True
+                            last_step = '1'  # left
+
+                        my_ord_dicts[index][cur_len] += last_step
+                        is_rights[index], is_downs[index] = False, False
+
+                    if op_now in OPERATORS or op_now in symbols:  # <=> node has children
+                        if op_now in OPERATORS and OPERATORS[op_now] == 2:  # <=> node has 2 children
+                            my_queues[index].append(cur_len)                                  ### index?
+                        else:
+                            is_downs[index] = True
+                        parents[index] = cur_len                                           ### index?
+                    elif op_now in no_child_symbols:
+                        if op_now.isdigit() and cur_len + 1 < max_len:           # на конец проверять на eos token
+                            prev_is_digits[index] = True
+                        else:
+                            if my_queues[index].__len__() == 0:
+                                parents[index] = 1
+                            else:
+                                parents[index] = my_queues[index].pop()  ### index???
+                                is_rights[index] = True
 
 
-                                 # больше не будем в этом индексе ???
-                before_collate[index] = [[int(rp_elem) for rp_elem in list(my_ord_dicts[index][path])]
-                                         if my_ord_dicts[index][path] != ''
-                                         else [] for path in my_ord_dicts[index]]
-                #logger.info('0s my_ord_dicts')
+                                     # больше не будем в этом индексе ???
+                    before_collate[index] = [[int(rp_elem) for rp_elem in list(my_ord_dicts[index][path])]
+                                             if my_ord_dicts[index][path] != ''
+                                             else [] for path in my_ord_dicts[index]]
+                    #logger.info('0s my_ord_dicts')
+                    #logger.info(my_ord_dicts[0])
+                    #logger.info('indexes my_ord_dicts')
+                    #logger.info(my_ord_dicts[index])
+
+                #logger.info('0s LINE EXAMPLE TREE_POS')
                 #logger.info(my_ord_dicts[0])
-                #logger.info('indexes my_ord_dicts')
-                #logger.info(my_ord_dicts[index])
 
-            #logger.info('0s LINE EXAMPLE TREE_POS')
-            #logger.info(my_ord_dicts[0])
-
-            ### before collate -> ready stuff
-            tree_positions_list = [generate_positions(root_paths.copy(), self.max_path_width, self.max_path_depth)
-                                   for root_paths in before_collate]
-            #logger.info(len(tree_positions_list))           # 320
-            #logger.info(tree_positions_list[0].size())
-            # bs = len(tree_positions_list)
-            # max_wd = tree_positions_list[0].size(1)
-            # max_wd = tree_positions_list[0].size(1)
-            for i in range(len(tree_positions_list)):
-                tree_positions_batch[i, :tree_positions_list[i].size(0), :].copy_(tree_positions_list[i])
+                ### before collate -> ready stuff
+                tree_positions_list = [generate_positions(root_paths.copy(), self.max_path_width, self.max_path_depth)
+                                       for root_paths in before_collate]
+                #logger.info(len(tree_positions_list))           # 320
+                #logger.info(tree_positions_list[0].size())
+                # bs = len(tree_positions_list)
+                # max_wd = tree_positions_list[0].size(1)
+                # max_wd = tree_positions_list[0].size(1)
+                for i in range(len(tree_positions_list)):
+                    tree_positions_batch[i, :tree_positions_list[i].size(0), :].copy_(tree_positions_list[i])
 
             # re-order batch and internal states
             generated[cur_len] = beam_words
