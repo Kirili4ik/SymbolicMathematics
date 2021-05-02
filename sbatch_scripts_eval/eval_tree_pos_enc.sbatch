@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBACTH --error=../logs/eval_tree_pos_enc_2004_nodups-%j.err   # Файл с ошибками
 #SBATCH --output=../logs/eval_tree_pos_enc_2004_nodups-%j.log  # Файл для вывода результатов
-#SBATCH --time=1-23:00:00            # Максимальное время выполнения
+#SBATCH --time=2-10:00:00            # Максимальное время выполнения
 #SBATCH --gpus=1                   # Требуемое кол-во GPU
 #SBATCH --cpus-per-task=2          # Требуемое кол-во CPU
 
