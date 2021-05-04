@@ -145,6 +145,8 @@ for set_name in ['train_half']:
     with open('data/ode1.' + set_name, 'r') as expressions:
         with open('data/ODE_rel_matrix_'+set_name+'.json', 'w') as rel_matrix_json:
             for i, line in tqdm(enumerate(expressions)):
+                if i > 5_000_000:
+                    break
                 #print(line)
                 qa = line.split('|')[1].split('\t')
                 if len(qa) == 2:
