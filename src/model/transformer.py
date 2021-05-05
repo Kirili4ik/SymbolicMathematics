@@ -715,6 +715,7 @@ class TransformerModel(nn.Module):
 
         is_pos_enc = (self.is_encoder and self.use_tree_pos_enc_E) or (self.is_decoder and self.use_tree_pos_enc_D)
         # for tree pos enc
+        logger.info(is_pos_enc)
         if is_pos_enc:
             my_queues = [deque([-1]) for i in range(beam_size * bs)]
             my_queues_temp = [deque() for i in range(beam_size * bs)]
@@ -754,7 +755,7 @@ class TransformerModel(nn.Module):
                 src_enc=src_enc,
                 src_len=src_len,
                 cache=cache,
-                root_paths=tree_positions_batch[:, :cur_len, :] if tree_positions_batch is not None else None # !!!!!!!!!!!
+                root_paths=tree_positions_batch[:, :cur_len, :] if tree_positions_batch is not None else None   # !!!!!!!!!!!
             )
             assert tensor.size() == (1, bs * beam_size, self.dim)
             tensor = tensor.data[-1, :, :]          # (bs * beam_size, dim)
@@ -838,15 +839,15 @@ class TransformerModel(nn.Module):
                 for word_num, tpl in enumerate(next_batch_beam):
                     _, word_id, _ = tpl
                     #logger.info('in loop')
-                    #logger.info(word_id)
+                    logger.info(word_id)
                     index = word_num  # index.item() # + word_num % 10
-                    #logger.info(index)
+                    logger.info(index)
 
                     # eos or max_len or done
                     if word_id == self.eos_index or cur_len + 1 == max_len or isinstance(word_id, int):
                         continue
                     op_now = self.id2word[word_id.item()]
-                    #logger.info(op_now)
+                    logger.info(op_now)
                     prev_is_digit = prev_is_digits[index]
                     prev_is_digits[index] = False
 
@@ -899,8 +900,8 @@ class TransformerModel(nn.Module):
                     #logger.info('indexes my_ord_dicts')
                     #logger.info(my_ord_dicts[index])
 
-                #logger.info('0s LINE EXAMPLE TREE_POS')
-                #logger.info(my_ord_dicts[0])
+                logger.info('0s LINE EXAMPLE TREE_POS')
+                logger.info(my_ord_dicts[0])
 
                 ### before collate -> ready stuff
                 tree_positions_list = [generate_positions(root_paths.copy(), self.max_path_width, self.max_path_depth)
