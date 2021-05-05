@@ -36,5 +36,5 @@ vocab = []
 for i, (key, value) in enumerate(zip(keys[idxs], values[idxs])):
     print(value, key, i)
     vocab.append(key)
-with open("data/rel_vocab.txt", "w") as fout:
+with open("data/ODE_rel_vocab.txt", "w") as fout:
     fout.write("\n".join(vocab))

@@ -742,8 +742,8 @@ class TransformerModel(nn.Module):
         while cur_len < max_len:
 
             # compute word scores
-            #logger.info('before fwd tree pos b size is')
-            #logger.info(tree_positions_batch[:, :cur_len, :].size())
+            # logger.info('before fwd tree pos batch is')
+            # logger.info(tree_positions_batch[:, :cur_len, :])
             #logger.info('and generated:')
             #logger.info(generated[:cur_len].size())
             tensor = self.forward(
@@ -838,16 +838,18 @@ class TransformerModel(nn.Module):
                 # для фразы sent_id нашел beam_size новых слов
                 for word_num, tpl in enumerate(next_batch_beam):
                     _, word_id, _ = tpl
-                    #logger.info('in loop')
-                    logger.info(word_id)
+                    # logger.info('in loop')
+                    # logger.info(word_id)
                     index = word_num  # index.item() # + word_num % 10
-                    logger.info(index)
+                    # logger.info(index)
 
                     # eos or max_len or done
                     if word_id == self.eos_index or cur_len + 1 == max_len or isinstance(word_id, int):
+                        # logger.info('found eos or maxlen or word int')
+                        # logger.info(my_ord_dicts[0])
                         continue
                     op_now = self.id2word[word_id.item()]
-                    logger.info(op_now)
+                    # logger.info(op_now)
                     prev_is_digit = prev_is_digits[index]
                     prev_is_digits[index] = False
 
@@ -856,7 +858,7 @@ class TransformerModel(nn.Module):
                             parents[index] = cur_len - 1                                ### index???
                         else:
                             if my_queues[index].__len__() == 0:
-                                parents[index] = 1
+                                parents[index] = 0
                             else:
                                 parents[index] = my_queues[index].pop()                     ### index???
                                 is_rights[index] = True
@@ -885,7 +887,7 @@ class TransformerModel(nn.Module):
                             prev_is_digits[index] = True
                         else:
                             if my_queues[index].__len__() == 0:
-                                parents[index] = 1
+                                parents[index] = 0
                             else:
                                 parents[index] = my_queues[index].pop()  ### index???
                                 is_rights[index] = True
@@ -900,8 +902,8 @@ class TransformerModel(nn.Module):
                     #logger.info('indexes my_ord_dicts')
                     #logger.info(my_ord_dicts[index])
 
-                logger.info('0s LINE EXAMPLE TREE_POS')
-                logger.info(my_ord_dicts[0])
+                #logger.info('0s LINE EXAMPLE TREE_POS')
+                # logger.info(my_ord_dicts[0])
 
                 ### before collate -> ready stuff
                 tree_positions_list = [generate_positions(root_paths.copy(), self.max_path_width, self.max_path_depth)
@@ -916,6 +918,8 @@ class TransformerModel(nn.Module):
 
             # re-order batch and internal states
             generated[cur_len] = beam_words
+            logger.info('generated after reordering')
+            logger.info(generated[max(0, cur_len-5):cur_len+1])
 
             example = ''
             for i in range(generated.size(1)):
@@ -969,6 +973,13 @@ class TransformerModel(nn.Module):
         for i, hypo in enumerate(best):
             decoded[:tgt_len[i] - 1, i] = hypo
             decoded[tgt_len[i] - 1, i] = self.eos_index
+
+        logger.info('DECODED')
+        for i in range(len(decoded)):
+            logger.info(decoded[i])
+        logger.info('generated hips')
+        for el in generated_hyps:
+            logger.info(el.hyp)
 
         # sanity check
         assert (decoded == self.eos_index).sum() == 2 * bs

@@ -379,6 +379,19 @@ class Evaluator(object):
                 for output in executor.map(check_hypothesis, inputs, chunksize=1):
                     outputs.append(output)
 
+
+            logger.info('real ones!')
+            logger.info([env.id2word[wid] for wid in inputs[0]['src']])
+            my_tgt = [env.id2word[wid] for wid in inputs[0]['tgt']]
+            logger.info(len(my_tgt))
+            logger.info(my_tgt)
+            logger.info('new el')
+            for el in inputs:
+                my_hyp = [env.id2word[wid] for wid in el['hyp']]
+                logger.info(len(my_hyp))
+                logger.info(my_hyp)
+
+
             # read results
             for i in range(bs):
 
