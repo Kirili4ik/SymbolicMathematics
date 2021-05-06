@@ -841,6 +841,7 @@ class TransformerModel(nn.Module):
                 tree_positions_batch = tree_positions_batch[beam_idx_np, :, :]
 
                 # для фразы sent_id нашел beam_size новых слов
+                place_now = cur_len - 1
                 for word_num, tpl in enumerate(next_batch_beam):
                     _, word_id, _ = tpl
                     # logger.info('in loop')
@@ -860,7 +861,7 @@ class TransformerModel(nn.Module):
 
                     if prev_is_digit:
                         if op_now.isdigit():
-                            parents[index] = cur_len - 1                                ### index???
+                            parents[index] = place_now - 1                                ### index???
                         else:
                             if my_queues[index].__len__() == 0:
                                 parents[index] = 0
@@ -869,8 +870,8 @@ class TransformerModel(nn.Module):
                                 is_rights[index] = True
 
 
-                    if cur_len != 1:
-                        my_ord_dicts[index][cur_len] += my_ord_dicts[index][parents[index]]      ### index???
+                    if place_now != 0:
+                        my_ord_dicts[index][place_now] += my_ord_dicts[index][parents[index]]      ### index???
                         if is_rights[index]:
                             last_step = '2'  # right
                         elif is_downs[index]:
@@ -878,15 +879,15 @@ class TransformerModel(nn.Module):
                         else:
                             last_step = '1'  # left
 
-                        my_ord_dicts[index][cur_len] += last_step
+                        my_ord_dicts[index][place_now] += last_step
                         is_rights[index], is_downs[index] = False, False
 
                     if op_now in OPERATORS or op_now in symbols:  # <=> node has children
                         if op_now in OPERATORS and OPERATORS[op_now] == 2:  # <=> node has 2 children
-                            my_queues[index].append(cur_len)                                  ### index?
+                            my_queues[index].append(place_now)                                  ### index?
                         else:
                             is_downs[index] = True
-                        parents[index] = cur_len                                           ### index?
+                        parents[index] = place_now                                           ### index?
                     elif op_now in no_child_symbols:
                         if op_now.isdigit() and cur_len + 1 < max_len:           # на конец проверять на eos token
                             prev_is_digits[index] = True
