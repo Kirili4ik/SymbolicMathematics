@@ -869,8 +869,9 @@ class TransformerModel(nn.Module):
                                 is_rights[index] = True
 
 
-                    if cur_len != 0:
-                        my_ord_dicts[index][cur_len] += my_ord_dicts[index][parents[index]]      ### index???
+                    if cur_len != 1:
+                        place_now = cur_len - 1
+                        my_ord_dicts[index][place_now] += my_ord_dicts[index][parents[index]]      ### index???
                         if is_rights[index]:
                             last_step = '2'  # right
                         elif is_downs[index]:
@@ -878,15 +879,15 @@ class TransformerModel(nn.Module):
                         else:
                             last_step = '1'  # left
 
-                        my_ord_dicts[index][cur_len] += last_step
+                        my_ord_dicts[index][place_now] += last_step
                         is_rights[index], is_downs[index] = False, False
 
                     if op_now in OPERATORS or op_now in symbols:  # <=> node has children
                         if op_now in OPERATORS and OPERATORS[op_now] == 2:  # <=> node has 2 children
-                            my_queues[index].append(cur_len)                                  ### index?
+                            my_queues[index].append(place_now)                                  ### index?
                         else:
                             is_downs[index] = True
-                        parents[index] = cur_len                                           ### index?
+                        parents[index] = place_now                                           ### index?
                     elif op_now in no_child_symbols:
                         if op_now.isdigit() and cur_len + 1 < max_len:           # на конец проверять на eos token
                             prev_is_digits[index] = True
@@ -905,6 +906,7 @@ class TransformerModel(nn.Module):
                     # ? generated[index]
                     if index == 0:
                         logger.info('first in batch, first hypothesis, my_ord_dicts:')
+                        logger.info(op_now)
                         logger.info(my_ord_dicts[index])
 
                     #logger.info('indexes my_ord_dicts')
