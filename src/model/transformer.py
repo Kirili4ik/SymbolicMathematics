@@ -715,7 +715,7 @@ class TransformerModel(nn.Module):
 
         is_pos_enc = (self.is_encoder and self.use_tree_pos_enc_E) or (self.is_decoder and self.use_tree_pos_enc_D)
         # for tree pos enc
-        logger.info(is_pos_enc)
+        # logger.info(is_pos_enc)
         if is_pos_enc:
             my_queues = [deque([-1]) for i in range(beam_size * bs)]
             my_queues_temp = [deque() for i in range(beam_size * bs)]
@@ -821,8 +821,8 @@ class TransformerModel(nn.Module):
 
             # re-order batch and internal states
             generated[cur_len] = beam_words
-            logger.info('generated after reordering and inserting')
-            logger.info([self.id2word[wid.item()] for wid in generated[:cur_len + 1, 0]])
+            # logger.info('generated after reordering and inserting')
+            # logger.info([self.id2word[wid.item()] for wid in generated[:cur_len + 1, 0]])
 
             # my reorder
             if is_pos_enc:
@@ -903,11 +903,10 @@ class TransformerModel(nn.Module):
                     before_collate[index] = [[int(rp_elem) for rp_elem in list(my_ord_dicts[index][path])]
                                              if my_ord_dicts[index][path] != ''
                                              else [] for path in my_ord_dicts[index]]
-                    # ? generated[index]
-                    if index == 0:
-                        logger.info('first in batch, first hypothesis, my_ord_dicts:')
-                        logger.info(op_now)
-                        logger.info(my_ord_dicts[index])
+                    #if index == 0:
+                    #    logger.info('first in batch, first hypothesis, my_ord_dicts:')
+                    #    logger.info(op_now)
+                    #    logger.info(my_ord_dicts[index])
 
                     #logger.info('indexes my_ord_dicts')
                     #logger.info(my_ord_dicts[index])
@@ -979,12 +978,12 @@ class TransformerModel(nn.Module):
             decoded[:tgt_len[i] - 1, i] = hypo
             decoded[tgt_len[i] - 1, i] = self.eos_index
 
-        logger.info('DECODED')
-        for i in range(len(decoded)):
-            logger.info(decoded[i])
-        logger.info('generated hips')
-        for el in generated_hyps:
-            logger.info(el.hyp)
+        # logger.info('DECODED')
+        # for i in range(len(decoded)):
+        #     logger.info(decoded[i])
+        # logger.info('generated hips')
+        # for el in generated_hyps:
+        #     logger.info(el.hyp)
 
         # sanity check
         assert (decoded == self.eos_index).sum() == 2 * bs
