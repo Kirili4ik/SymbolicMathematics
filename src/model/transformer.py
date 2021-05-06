@@ -822,7 +822,7 @@ class TransformerModel(nn.Module):
             # re-order batch and internal states
             generated[cur_len] = beam_words
             logger.info('generated after reordering and inserting')
-            for i in range(generated.size(0)):
+            for i in range(cur_len + 1):
                 logger.info(generated[i])
 
             # my reorder
@@ -904,8 +904,9 @@ class TransformerModel(nn.Module):
                                              if my_ord_dicts[index][path] != ''
                                              else [] for path in my_ord_dicts[index]]
                     # ? generated[index]
-                    logger.info('first in batch, first hypothesis, my_ord_dicts:')
-                    logger.info(my_ord_dicts[0])
+                    if index == 0:
+                        logger.info('first in batch, first hypothesis, my_ord_dicts:')
+                        logger.info(my_ord_dicts[index])
 
                     #logger.info('indexes my_ord_dicts')
                     #logger.info(my_ord_dicts[index])
