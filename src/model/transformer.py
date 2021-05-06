@@ -822,7 +822,7 @@ class TransformerModel(nn.Module):
             # re-order batch and internal states
             generated[cur_len] = beam_words
             logger.info('generated after reordering and inserting')
-            for i in generated.size(0):
+            for i in range(generated.size(0)):
                 logger.info(generated[i])
 
             # my reorder
