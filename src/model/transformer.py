@@ -822,8 +822,7 @@ class TransformerModel(nn.Module):
             # re-order batch and internal states
             generated[cur_len] = beam_words
             logger.info('generated after reordering and inserting')
-            for i in range(cur_len + 1):
-                logger.info(generated[i])
+            logger.info([self.id2word[wid.item()] for wid in generated[:cur_len + 1, 0]])
 
             # my reorder
             if is_pos_enc:
