@@ -135,7 +135,8 @@ class MultiHeadAttention(nn.Module):
 
     def __init__(self, n_heads, dim, dropout, max_relative_positions=0, use_neg_dist=False,
                  use_encdec_seq_rel_att=False,
-                 use_tree_rel_att=None, tree_rel_vocab_size=0):
+                 use_tree_rel_att=None, tree_rel_vocab_size=0,
+                 is_encdec=False):
         super().__init__()
         self.layer_id = next(MultiHeadAttention.NEW_ID)
         self.dim = dim
@@ -151,7 +152,7 @@ class MultiHeadAttention(nn.Module):
         self.max_relative_positions = max_relative_positions
         self.use_neg_dist = use_neg_dist
         self.use_encdec_seq_rel_att = use_encdec_seq_rel_att
-        if max_relative_positions > 0:
+        if (not is_encdec and max_relative_positions > 0) or (is_encdec and use_encdec_seq_rel_att):
             vocab_size = max_relative_positions * 2 + 1 \
                 if use_neg_dist else max_relative_positions + 1
             self.relative_positions_embeddings_k = nn.Embedding(vocab_size, dim // n_heads)
@@ -420,14 +421,16 @@ class TransformerModel(nn.Module):
             self.attentions.append(MultiHeadAttention(self.n_heads, self.dim, dropout=self.attention_dropout,
                                    max_relative_positions=self.max_relative_pos, use_neg_dist=self.use_neg_dist,
                                    use_encdec_seq_rel_att=self.use_encdec_seq_rel_att,
-                                   use_tree_rel_att=self.use_tree_rel_att, tree_rel_vocab_size=self.tree_rel_vocab_size))
+                                   use_tree_rel_att=self.use_tree_rel_att, tree_rel_vocab_size=self.tree_rel_vocab_size,
+                                   is_encdec=False))
             self.layer_norm1.append(nn.LayerNorm(self.dim, eps=1e-12))
             if self.is_decoder:
                 self.layer_norm15.append(nn.LayerNorm(self.dim, eps=1e-12))
                 self.encoder_attn.append(MultiHeadAttention(self.n_heads, self.dim, dropout=self.attention_dropout,
                                                             max_relative_positions=self.max_relative_pos,
                                                             use_neg_dist=self.use_neg_dist,
-                                                            use_encdec_seq_rel_att=self.use_encdec_seq_rel_att))
+                                                            use_encdec_seq_rel_att=self.use_encdec_seq_rel_att,
+                                                            is_encdec=True))
             self.ffns.append(TransformerFFN(self.dim, self.hidden_dim, self.dim, dropout=self.dropout))
             self.layer_norm2.append(nn.LayerNorm(self.dim, eps=1e-12))
 
