@@ -719,9 +719,9 @@ class TransformerModel(nn.Module):
         #logger.info(positions.size())     # (512; 320); (max_len, bs * beam_size)
         #logger.info(cur_len)              # 1
 
-        is_pos_enc = (self.is_encoder and self.use_tree_pos_enc_E) or (self.is_decoder and self.use_tree_pos_enc_D)
+        is_pos_enc = self.is_decoder and self.use_tree_pos_enc_D
         # for tree pos enc
-        # logger.info(is_pos_enc)
+        print('tree pos enc is being used', is_pos_enc)
         if is_pos_enc:
             my_queues = [deque([-1]) for i in range(beam_size * bs)]
             my_queues_temp = [deque() for i in range(beam_size * bs)]
@@ -931,10 +931,10 @@ class TransformerModel(nn.Module):
                 for i in range(len(tree_positions_list)):
                     tree_positions_batch[i, :tree_positions_list[i].size(0), :].copy_(tree_positions_list[i])
 
-            example = ''
-            for i in range(generated.size(1)):
-                example += self.id2word[generated[i, 0].item()]
-                example += ' '
+            #example = ''
+            #for i in range(generated.size(1)):
+            #    example += self.id2word[generated[i, 0].item()]
+            #    example += ' '
             #logger.info('0s LINE EXAMPLE GENERATED')
             #logger.info(example)
 
