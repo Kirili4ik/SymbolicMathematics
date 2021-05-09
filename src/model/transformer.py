@@ -225,8 +225,9 @@ class MultiHeadAttention(nn.Module):
             #print('key_len', key_len)
 
             relative_positions_matrix = generate_relative_positions_matrix(   # 1 or klen x klen
-                key_len, self.max_relative_positions, self.use_neg_dist,
-                cache=True if cache is not None else False)
+                key_len, q.size(2),
+                self.max_relative_positions, self.use_neg_dist,
+                cache=False) #True if cache is not None else False)
             #logger.info(relative_positions_matrix)
 
             #print('generated rel pos matrix size', relative_positions_matrix.size())

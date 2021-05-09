@@ -83,18 +83,21 @@ class TreePositionalEncodings(torch.nn.Module):
 
 
 ### tree rel att ###
-def generate_relative_positions_matrix(length,
+def generate_relative_positions_matrix(len1, len2,
                                        max_relative_positions,
                                        use_neg_dist,
                                        cache=False):
     """Generate the clipped relative positions matrix
        for a given length and maximum relative positions"""
     if cache:
-        distance_mat = torch.arange(-length + 1, 1, 1).unsqueeze(0)
+        distance_mat = torch.arange(-len1 + 1, 1, 1).unsqueeze(0)
     else:
-        range_vec = torch.arange(length)
-        range_mat = range_vec.unsqueeze(-1).expand(-1, length).transpose(0, 1)
-        distance_mat = range_mat - range_mat.transpose(0, 1)
+        range_vec = torch.arange(len1)
+        range_mat = range_vec.unsqueeze(-1).expand(-1, len2).transpose(0, 1)
+        range_vec2 = torch.arange(len2)
+        range_mat2 = range_vec2.unsqueeze(-1).expand(-1, len1)
+
+        distance_mat = range_mat - range_mat2
 
     distance_mat_clipped = torch.clamp(distance_mat,
                                        min=-max_relative_positions,
