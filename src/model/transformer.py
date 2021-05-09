@@ -229,6 +229,12 @@ class MultiHeadAttention(nn.Module):
 
             relations_k = self.relative_positions_embeddings_k(               #  1 or klen x klen x dim_per_head
                 relative_positions_matrix.to(k.device))
+
+            values_len = v.size(2)
+            relative_positions_matrix = generate_relative_positions_matrix(  # 1 or klen x klen
+                values_len, self.max_relative_positions, self.use_neg_dist,
+                cache=True if cache is not None else False)
+
             relations_v = self.relative_positions_embeddings_v(               #  1 or klen x klen x dim_per_head
                 relative_positions_matrix.to(k.device))
 
