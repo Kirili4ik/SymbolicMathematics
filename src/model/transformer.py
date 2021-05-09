@@ -215,6 +215,12 @@ class MultiHeadAttention(nn.Module):
                           else False
 
         if use_seq_rel_att:
+            logger.info('start')
+            logger.info(kv is not None)
+            logger.info(k.size())
+            logger.info(v.size())
+            if kv is not None:
+                logger.info(kv.size())
             key_len = k.size(2)
             #print('key_len', key_len)
 
@@ -230,17 +236,21 @@ class MultiHeadAttention(nn.Module):
             relations_k = self.relative_positions_embeddings_k(               #  1 or klen x klen x dim_per_head
                 relative_positions_matrix.to(k.device))
 
-            values_len = v.size(2)
-            relative_positions_matrix = generate_relative_positions_matrix(  # 1 or klen x klen
-                values_len, self.max_relative_positions, self.use_neg_dist,
-                cache=True if cache is not None else False)
+            #values_len = v.size(2)
+            #relative_positions_matrix = generate_relative_positions_matrix(  # 1 or klen x klen
+            #    values_len, self.max_relative_positions, self.use_neg_dist,
+            #    cache=True if cache is not None else False)
 
             relations_v = self.relative_positions_embeddings_v(               #  1 or klen x klen x dim_per_head
                 relative_positions_matrix.to(k.device))
+            logger.info(relations_k.size())
+            logger.info(relations_v.size())
 
         q = q / math.sqrt(dim_per_head)                                       # (bs, n_heads, qlen, dim_per_head)
         q_k = torch.matmul(q, k.transpose(2, 3))                              # (bs, n_heads, qlen, klen)
         mask = (mask == 0).view(mask_reshape).expand_as(q_k)                  # (bs, n_heads, qlen, klen)
+
+        logger.info(q.size())
 
         if use_seq_rel_att:
 
