@@ -222,10 +222,11 @@ class MultiHeadAttention(nn.Module):
             #if kv is not None:
             #    logger.info(kv.size())
             key_len = k.size(2)
+            att_size_2 = key_len if kv is None else q.size(2)
             #print('key_len', key_len)
 
             relative_positions_matrix = generate_relative_positions_matrix(   # 1 or klen x klen
-                key_len, q.size(2),
+                key_len, att_size_2,
                 self.max_relative_positions, self.use_neg_dist,
                 cache=(cache is not None)) #  and key_len == q.size(2))) #True if cache is not None else False)
             #logger.info(relative_positions_matrix)
