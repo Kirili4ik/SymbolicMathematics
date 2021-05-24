@@ -114,7 +114,7 @@ def get_parser():
                         help="Clip gradients norm (0 to disable)")
     parser.add_argument("--epoch_size", type=int, default=300000,
                         help="Epoch size / evaluation frequency")
-    parser.add_argument("--max_epoch", type=int, default=400,
+    parser.add_argument("--max_epoch", type=int, default=100,
                         help="Maximum epoch size")
     parser.add_argument("--stopping_criterion", type=str, default="",
                         help="Stopping criterion, and number of non-increase before stopping the experiment")

@@ -107,10 +107,10 @@ OPERATORS = {
         'h': 3,
     }
 
-symbols = ['I', 'INT+', 'INT-', 'INT', 'FLOAT', '-', '.', '10^', 'Y', "Y'", "Y''"]
+symbols = ['I', 'INT+', 'INT-', 'INT', 'FLOAT', '-', '.', '10^']
 
 constants = ['pi', 'E']
-variables = ['x', 'y', 'z', 't']
+variables = ['x', 'y', 'z', 't', 'Y', "Y'", "Y''"]
 functions = ['f', 'g', 'h']
 elements = [str(i) for i in range(-10, 10)]
 coefficients = [f'a{i}' for i in range(10)]
