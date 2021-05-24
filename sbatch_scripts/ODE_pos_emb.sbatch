@@ -6,4 +6,4 @@
 #SBATCH --cpus-per-task=2          # Требуемое кол-во CPU
 
 source activate sym-math
-srun python ../main.py --max_epoch 200 --exp_name ODE_pos_emb --tasks "ode1" --reload_data "ode1,../data/ode1.train,../data/ode1.valid,../data/ode1.test" --dump_path '../dumped/' --env_base_seed 0 --torch_n_random_seed 0 --use_pos_embeddings_E True --use_pos_embeddings_D True
+srun python ../main.py --max_epoch 50 --exp_name ODE_pos_emb_small --tasks "ode1" --reload_data "ode1,../data/ode1.train,../data/ode1.valid,../data/ode1.test" --dump_path '../dumped/' --env_base_seed -1 --torch_n_random_seed -1 --use_pos_embeddings_E True --use_pos_embeddings_D True
