@@ -1,6 +1,6 @@
 from tqdm import tqdm
 import numpy as np
-import jsonlines
+#import jsonlines
 import json
 
 from collections import Counter
@@ -12,7 +12,7 @@ def _insert(iterable):
     word_count.update(words)
 
 word_count = Counter()
-with jsonlines.open("data/rel_matrix_train_clean.jsonl") as f:
+with open("data/rel_matrix_train_clean.json") as f:
     for line in tqdm(f):
         matrix = json.loads(line)
         new_matrix = [line.split() for line in matrix]
