@@ -30,14 +30,14 @@ We investigate whether feeding data structure to the Transformer improves its pe
 ### How to run
 
 Raw data for training and validation can be found [here](https://github.com/facebookresearch/SymbolicMathematics#datasets-and-trained-models) or [generated](https://github.com/facebookresearch/SymbolicMathematics#data-generation). 
-Data preprocessing is done in `notebooks/preprocess_notebook.ipynb` and `notebooks/ODE_preprocess_notebook.ipynb`. There can be found functions for:
+Data preprocessing is done in `notebooks/preprocess_notebook.ipynb` and `notebooks/ODE_preprocess_notebook.ipynb`, including:
   1) Deleting found repeating samples
-  2) Creating adjacency matrices file
-  3) Generating paths from root to node
+  2) Creating adjacency matrices (to a file)
+  3) Generating paths from root to node (to a file)
 
 (Also `notebooks/ODE_preprocess_notebook-ADJ_MAT.ipynb` is for generating adjacency matrices for ODEs separately)
 
-Notebooks by reg `*my_metrics*.ipynb` is for plotting metrics.
+Notebooks by reg `*my_metrics*.ipynb` are for plotting metrics.
 
 The project was done using a server with [Slurm](https://slurm.schedmd.com/documentation.html). Scripts for training and evaluation can be found in `sbatch_scripts/` and `sbatch_scripts_eval/` folders respectively. Arguments descriptions can be found in [main.py](https://github.com/Kirili4ik/SymbolicMathematics/blob/master/main.py) or in [this repo](https://github.com/facebookresearch/SymbolicMathematics).
 
