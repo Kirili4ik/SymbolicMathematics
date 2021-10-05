@@ -29,13 +29,11 @@ We investigate whether feeding data structure to the Transformer improves its pe
 
 ### How to run
 
-- Raw data
-Data for training and validation can be found [here](https://github.com/facebookresearch/SymbolicMathematics#datasets-and-trained-models) or [generated](https://github.com/facebookresearch/SymbolicMathematics#data-generation). 
-- Preprocessing data
+Raw data for training and validation can be found [here](https://github.com/facebookresearch/SymbolicMathematics#datasets-and-trained-models) or [generated](https://github.com/facebookresearch/SymbolicMathematics#data-generation). 
 Data preprocessing is done in notebooks/preprocess_notebook.ipynb and notebooks/ODE_preprocess_notebook.ipynb. There can be found functions for:
-1) Deleting found repeating samples
-2) Creating adjacency matrices
-3) Generating paths from root to node
+  1) Deleting found repeating samples
+  2) Creating adjacency matrices
+  3) Generating paths from root to node
 
 (Also notebooks/ODE_preprocess_notebook-ADJ_MAT.ipynb is for generating adjacency matrices for ODEs separately)
 
