@@ -12,9 +12,6 @@ We investigate whether feeding data structure to the Transformer improves its pe
 ### Some keypoints:
 
 #### Passing structure to Transformers
-![alt text](https://downloader.disk.yandex.ru/preview/c4f3c11d07f494dda0fb5c301b136579554c07019a0d5050d3b4ff2da3917e6d/615d0406/Nvz-RmBdM1EQDrFh0jW-ey4TV4E9jF0xMXrTr5csyFPrE60eyFcXDK6sxx42_QWIAhB56NVLKmpdaqr1_7as9g%3D%3D?uid=0&filename=4samples.jpeg&disposition=inline&hash=&limit=0&content_type=image%2Fjpeg&owner_uid=0&tknv=v2&size=2048x2048)
-
-#### Passing structure to Transformers
 ![alt text](https://downloader.disk.yandex.ru/preview/0e7c045b97dc9276311d77b02f748632faee82cd8aa12b0d6712c1ef844e1447/615d0450/gESCaBP7OhBPSUBjZ4i7v7oRZ3BhzwM15uhxsl_P9RiiT28y8Wpmx8GCZpYmjJ5IWtqAI90r03FlqwoD9LrUaw%3D%3D?uid=0&filename=image_2021-10-06_00-21-37.png&disposition=inline&hash=&limit=0&content_type=image%2Fpng&owner_uid=0&tknv=v2&size=2048x2048)
 
 ##### Problem statement and goal setting
