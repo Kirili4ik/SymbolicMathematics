@@ -2,29 +2,29 @@
 
 This is a repository containing code for my Bachelor Thesis made in 2021. The code is based on [this repo](https://github.com/facebookresearch/SymbolicMathematics).
 
-### Abstract:
+## Abstract:
 
 We investigate whether feeding data structure to the Transformer improves its performance on integration and solving ordinary differential equations (ODEs). We study recently developed tree-based model modifications and compare them. In our experience, the use of these alterations provides no benefit over the base approach. We assume this is due to an uncommonly large amount of data.
 
 📝 [Thesis](https://www.overleaf.com/read/rvncyyqjbbwz), 
 👨‍🏫 [Presentation (gdocs)](https://docs.google.com/presentation/d/1CPpGKa_fV8VHdYyUlyoLdI4NnAnVilKW7imYqdCS-oc/edit?usp=sharing)
 
-### Some keypoints:
+## Some keypoints:
 
-#### Passing structure to Transformers
+### Passing structure to Transformers
 ![alt text](https://github.com/Kirili4ik/SymbolicMathematics/blob/master/pictures/passing_structure.png)
 
-##### Problem statement and goal setting
+### Problem statement and goal setting
 ![alt text](https://github.com/Kirili4ik/SymbolicMathematics/blob/master/pictures/problem_goal.png)
 
-##### Preliminary experiments
+### Preliminary experiments
 ![alt text](https://github.com/Kirili4ik/SymbolicMathematics/blob/master/pictures/preliminary.png)
 
-#### Prediction analysis
+### Prediction analysis
 ![alt text](https://github.com/Kirili4ik/SymbolicMathematics/blob/master/pictures/analysis.jpeg)
 
 
-### How to run
+## How to run
 
 Raw data for training and validation can be found [here](https://github.com/facebookresearch/SymbolicMathematics#datasets-and-trained-models) or [generated](https://github.com/facebookresearch/SymbolicMathematics#data-generation). 
 Data preprocessing is done in `notebooks/preprocess_notebook.ipynb` and `notebooks/ODE_preprocess_notebook.ipynb`, including:
