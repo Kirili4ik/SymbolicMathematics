@@ -12,16 +12,16 @@ We investigate whether feeding data structure to the Transformer improves its pe
 ### Some keypoints:
 
 #### Passing structure to Transformers
-![alt text](https://downloader.disk.yandex.ru/preview/0e7c045b97dc9276311d77b02f748632faee82cd8aa12b0d6712c1ef844e1447/615d0450/gESCaBP7OhBPSUBjZ4i7v7oRZ3BhzwM15uhxsl_P9RiiT28y8Wpmx8GCZpYmjJ5IWtqAI90r03FlqwoD9LrUaw%3D%3D?uid=0&filename=image_2021-10-06_00-21-37.png&disposition=inline&hash=&limit=0&content_type=image%2Fpng&owner_uid=0&tknv=v2&size=2048x2048)
+![alt text](https://github.com/Kirili4ik/SymbolicMathematics/blob/master/pictures/passing_structure.png)
 
 ##### Problem statement and goal setting
-![alt text](https://downloader.disk.yandex.ru/preview/4681ce37ad1e059ba364791ccb01b30332c62d807f02b3fc20f5c3efc8446cce/615d045b/E8ElOzC3TrAlxJXZ5zkouNUD56jZk__yQLCWFou3h4dQff-dtEP06DRn4K_DK-HNdQuNmK2UBMTbeYxYYyKXLw%3D%3D?uid=0&filename=image_2021-10-06_00-23-05.png&disposition=inline&hash=&limit=0&content_type=image%2Fpng&owner_uid=0&tknv=v2&size=2048x2048)
+![alt text](https://github.com/Kirili4ik/SymbolicMathematics/blob/master/pictures/problem_goal.png)
 
 ##### Preliminary experiments
-![alt text](https://downloader.disk.yandex.ru/preview/f5548144c8a866d791f9d315865f40290a7aadbd7ee6cb99b02b520877e7cb62/615d048c/VrJxqFOQGGLxaRV35vwOcroRZ3BhzwM15uhxsl_P9RhJT9UX0EZmvCGz9oILD--qnbb1QPciz1Attg8n_zUSvA%3D%3D?uid=0&filename=image_2021-10-06_00-24-03.png&disposition=inline&hash=&limit=0&content_type=image%2Fpng&owner_uid=0&tknv=v2&size=2048x2048)
+![alt text](https://github.com/Kirili4ik/SymbolicMathematics/blob/master/pictures/preliminary.png)
 
 #### Prediction analysis
-![alt text](https://downloader.disk.yandex.ru/preview/687d19b6a43f4f5aedb4957f5f449205898155558281296f0dd7a5800f616b46/615d0499/73DxFhWVFOoFlpXrW4mF-roRZ3BhzwM15uhxsl_P9RgZkkptbgo4AFSS0m4-1oe0gboDfzDtplg2WZ-wQUN16Q%3D%3D?uid=0&filename=image_2021-10-06_00-24-20.png&disposition=inline&hash=&limit=0&content_type=image%2Fpng&owner_uid=0&tknv=v2&size=2048x2048)
+![alt text](https://github.com/Kirili4ik/SymbolicMathematics/blob/master/pictures/analysis.jpeg)
 
 
 ### How to run
